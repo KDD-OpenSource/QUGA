@@ -28,11 +28,14 @@ def executeExperiments(
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'ae':
 		resultFolders = []
+		avgErrorDict = {'algorithm': [], 'avgError':[]}
 		for algorithm, trainDataset, testDataset, resultAE in product(algorithms, trainDatasets, testDatasets, resultsAE):
 			tmpFolderTrain, tmpFolderTest = addAEFolderstructure(runFolder, algorithm, trainDataset, testDataset)
 			algorithm.trainAE(trainDataset)
 			storeAEExperiment(algorithm, trainDataset, testDataset, resultAE, tmpFolderTrain, tmpFolderTest, settings)
 			resultFolders.append(tmpFolderTest)
+
+		# plotArchitectureAvgError(algorithms, testDatasets, resultsAE, runFolder)
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'smt':
 		# go through all folders in result folders, 
@@ -51,19 +54,7 @@ def executeExperiments(
 			maxAdversDict['maxAdversAttack'].append(resultSMT.result)
 			print('Autoencoder: {}'.format(autoencoder.architecture))
 
-		plotArchitecture(maxAdversDict, runFolder)
-
-		# AEArchitectures = [x.architecture for x in maxAdversDict['algorithm']]
-		# y_pos = np.arange(len(AEArchitectures))
-		# maxAdversAttacks = maxAdversDict['maxAdversAttack']
-		# errors = [0.1 for i in range(len(maxAdversAttacks))]
-		# plt.errorbar(y_pos, maxAdversAttacks, errors, linestyle='None')
-
-		# # plt.bar(y_pos, maxAdversAttacks)
-		# plt.xticks(y_pos, AEArchitectures)
-		# plt.savefig(runFolder + '//'+'plot_with_errors.png')
-		# plt.show()
-
+		plotArchitectureMaxAdversAttack(maxAdversDict, runFolder)
 		# TODO: store final error as result to be plotted
 
 
@@ -74,7 +65,7 @@ def decomposeObjects(objects):
 
 	return objects[0], trainDatasets, testDatasets, validationDatasets, objects[2], resultsAE, resultsSMT
 
-def plotArchitecture(maxAdversDict, runFolder):
+def plotArchitectureMaxAdversAttack(maxAdversDict, runFolder):
 		AEArchitectures = [x.architecture for x in maxAdversDict['algorithm']]
 		y_pos = np.arange(len(AEArchitectures))
 		maxAdversAttacks = maxAdversDict['maxAdversAttack']
@@ -96,3 +87,16 @@ def storeAEExperiment(algorithm, trainDataset, testDataset, resultAE, tmpFolderT
 	testDataset.saveData(tmpFolderTest)
 	algorithm.saveAE(tmpFolderTrain)
 	storeAEResult(tmpFolderTest, trainDataset, testDataset, algorithm, resultAE, testName = settings.testName)
+
+def plotArchitectureAvgError(algorithms, datasets, resultsAE, runFolder):
+	for dataset in datasets:
+
+		AEArchitectures = [x.architecture for x in algorithms]
+		y_pos = np.arange(len(AEArchitectures))
+		avgErrorResults = [result for result in resultsAE if result.name == 'avgError']
+		# plt.plot(y_pos, avgErrors)
+		import pdb; pdb.set_trace()
+		errors = [0.1 for i in range(len(avgErrors))]
+		plt.errorbar(y_pos, avgErrors, errors, linestyle='None')
+		plt.xticks(y_pos, AEArchitectures)
+		plt.savefig(runFolder + '//'+'avgErrors_'+dataset.name[:5])

@@ -1,6 +1,6 @@
 from src.algorithms import autoencoder, smtSolver
 from src.data import sineNoise, circleNoise
-from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack
+from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack, avgError
 import torch.nn as nn
 import math
 
@@ -103,6 +103,7 @@ def getResults():
 	results = [
 	origReconTsPlot(),
 	# adversAttackPairQualPlot(),
-	maxAdversAttack()
+	# maxAdversAttack(),
+	avgError()
 	]	
 	return results
