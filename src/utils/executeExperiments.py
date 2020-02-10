@@ -51,6 +51,30 @@ def executeExperiments(
 			maxAdversDict['maxAdversAttack'].append(resultSMT.result)
 			print('Autoencoder: {}'.format(autoencoder.architecture))
 
+		plotArchitecture(maxAdversDict, runFolder)
+
+		# AEArchitectures = [x.architecture for x in maxAdversDict['algorithm']]
+		# y_pos = np.arange(len(AEArchitectures))
+		# maxAdversAttacks = maxAdversDict['maxAdversAttack']
+		# errors = [0.1 for i in range(len(maxAdversAttacks))]
+		# plt.errorbar(y_pos, maxAdversAttacks, errors, linestyle='None')
+
+		# # plt.bar(y_pos, maxAdversAttacks)
+		# plt.xticks(y_pos, AEArchitectures)
+		# plt.savefig(runFolder + '//'+'plot_with_errors.png')
+		# plt.show()
+
+		# TODO: store final error as result to be plotted
+
+
+
+def decomposeObjects(objects):
+	trainDatasets, testDatasets, validationDatasets = splitDatasets(objects[1])
+	resultsAE, resultsSMT = splitResults(objects[3], 'ae', 'smt')
+
+	return objects[0], trainDatasets, testDatasets, validationDatasets, objects[2], resultsAE, resultsSMT
+
+def plotArchitecture(maxAdversDict, runFolder):
 		AEArchitectures = [x.architecture for x in maxAdversDict['algorithm']]
 		y_pos = np.arange(len(AEArchitectures))
 		maxAdversAttacks = maxAdversDict['maxAdversAttack']
@@ -60,17 +84,6 @@ def executeExperiments(
 		# plt.bar(y_pos, maxAdversAttacks)
 		plt.xticks(y_pos, AEArchitectures)
 		plt.savefig(runFolder + '//'+'plot_with_errors.png')
-		plt.show()
-
-		# TODO: store final error as result to be plotted
-
-
-
-	def decomposeObjects(objects):
-	trainDatasets, testDatasets, validationDatasets = splitDatasets(objects[1])
-	resultsAE, resultsSMT = splitResults(objects[3], 'ae', 'smt')
-
-	return objects[0], trainDatasets, testDatasets, validationDatasets, objects[2], resultsAE, resultsSMT
 
 def addAEFolderstructure(runFolder, algorithm, trainDataset, testDataset):
 	tmpFolderAlg = addFolder(runFolder, algorithm)
