@@ -8,6 +8,9 @@ import torch
 import numpy as np
 from z3 import *
 from ..algorithms.autoencoder import autoencoder
+from ..data.dataset import dataset
+# from ..evaluation.avgError import resultAE
+# from ..evaluation.resultSMT import resultSMT
 
 def splitDatasets(datasets):
 	trainDatasets = []
@@ -44,29 +47,28 @@ def createFolderStructure(seed):
 
 
 
-def storeAEResult(folder, trainDataset,testDataset, algorithm, result, testName):
-	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
-	cwd = os.getcwd()
+# def storeAEResult(folder, trainDataset,testDataset, algorithm, result, testName):
+# 	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
+# 	cwd = os.getcwd()
+# 	os.chdir(folder)
+# 	resultToBeSaved = result.getResult(algorithm, trainDataset, testDataset)
 
-	os.chdir(folder)
+# 	if isinstance(resultToBeSaved, plt.Figure):
+# 		resultToBeSaved.suptitle(f'Alg: {algorithm.name},\n Train-Dataset: {trainDataset.name}, \n Test-Dataset: {testDataset.name}')
+# 		plt.savefig(os.getcwd()+'\\'+str(result.name))
+# 		plt.close('all')
+# 	elif isinstance(resultToBeSaved, pd.DataFrame):
+# 		resultToBeSaved.to_csv(os.getcwd()+'\\'+str(result.name) + '.csv', header = False)
+# 	else:
+# 		print("Your result is not in the appropriate format, hence it did not get saved")
+# 		#some other code
+# 	if result.name  == 'pwDistance':
+# 		sequencePlotPw = sequencePlotInd(seed = result.seed)
+# 		pwDistFig = sequencePlotPw.getResult(algorithm, trainDataset, testDataset, resultToBeSaved.iloc[-1:,-2:])
+# 		plt.savefig(os.getcwd() + '\\' + str('pwDistancePlot'))
+# 		plt.close('all')
 
-	resultToBeSaved = result.getResult(algorithm, trainDataset, testDataset)
-	if isinstance(resultToBeSaved, plt.Figure):
-		resultToBeSaved.suptitle(f'Alg: {algorithm.name},\n Train-Dataset: {trainDataset.name}, \n Test-Dataset: {testDataset.name}')
-		plt.savefig(os.getcwd()+'\\'+str(result.name))
-		plt.close('all')
-	elif isinstance(resultToBeSaved, pd.DataFrame):
-		resultToBeSaved.to_csv(os.getcwd()+'\\'+str(result.name) + '.csv', header = False)
-	else:
-		print("Your result is not in the appropriate format, hence it did not get saved")
-		#some other code
-	if result.name  == 'pwDistance':
-		sequencePlotPw = sequencePlotInd(seed = result.seed)
-		pwDistFig = sequencePlotPw.getResult(algorithm, trainDataset, testDataset, resultToBeSaved.iloc[-1:,-2:])
-		plt.savefig(os.getcwd() + '\\' + str('pwDistancePlot'))
-		plt.close('all')
-
-	os.chdir(cwd)
+# 	os.chdir(cwd)
 
 def pointsToTimeseries(points: np.array):
 	# one could think about incorporating a window_step 
@@ -120,18 +122,30 @@ def saveSmtSolutions(solutions, tmpFolderSmt):
 		os.chdir(cwd)
 
 
-def splitResults(results, flg1, flg2):
-	resultsAE = []
-	resultsSmt = []
-	for elem in results:
-		if elem.aeSmtFlg == flg1:
-			resultsAE.append(elem)
-		elif elem.aeSmtFlg == flg2:
-			resultsSmt.append(elem)
-		else:
-			raise Exception('Any result should belong a result type indicated by a given flg')
+# def splitResults(results, flg1, flg2):
+# 	resultsAE = []
+# 	resultsSmt = []
+# 	for elem in results:
+# 		if elem.aeSmtFlg == flg1:
+# 			resultsAE.append(elem)
+# 		elif elem.aeSmtFlg == flg2:
+# 			resultsSmt.append(elem)
+# 		else:
+# 			raise Exception('Any result should belong a result type indicated by a given flg')
 
-	return resultsAE, resultsSmt
+# 	return resultsAE, resultsSmt
+# def splitResults(results):
+# 	resultsAE = []
+# 	resultsSmt = []
+# 	for elem in results:
+# 		if isinstance(elem, resultAE):
+# 			resultsAE.append(elem)
+# 		elif isinstance(elem, resultSMT):
+# 			resultsSmt.append(elem)
+# 		else:
+# 			raise Exception('Any result should belong a result type indicated by a given flg')
+
+# 	return resultsAE, resultsSmt
 
 
 def addFolder(folder, object):
@@ -141,7 +155,7 @@ def addFolder(folder, object):
 	os.chdir(folder)
 	newFolderPath = os.getcwd() + \
 		'\\' + \
-		object.name[:5] + '_' + str(object.id)[:5]
+		object.name[:5] + '_' + str(object.obj_id)[:5]
 	if not os.path.exists(newFolderPath):
 		os.mkdir(newFolderPath)
 	os.chdir(newFolderPath)
@@ -150,11 +164,7 @@ def addFolder(folder, object):
 
 
 def loadAE(folder):
-	cwd = os.getcwd()
-	while 'autoencoder.pth' not in os.listdir():
-		os.chdir('..')
-
-	aeParameters = loadParamsFromJson('parameters.txt')
+	aeParameters = loadAEParam(folder)
 	modelAE = autoencoder(
 		name = aeParameters['name'],
 		seed = eval(aeParameters['seed']),
@@ -163,9 +173,58 @@ def loadAE(folder):
 		# We are a little bit sloppy here, as we do not read torch.nn.ReLU() from the parameters file. In this particular situation that is ok, because SMT can only deal with ReLUs anyway
 		activationFct = torch.nn.ReLU(),
 		)
-
-	modelAE.module.load_state_dict(torch.load('./autoencoder.pth'))
+	loadAEState(folder, modelAE)
 	return modelAE
+
+def loadAEParam(folder):
+	cwd = os.getcwd()
+	while 'autoencoder.pth' not in os.listdir():
+		os.chdir('..')
+
+	aeParameters = loadParamsFromJson('parameters_algorithm.txt')
+	os.chdir(cwd)
+	return aeParameters	
+
+def loadAEState(folder, autoencoder):
+	cwd = os.getcwd()
+	while 'autoencoder.pth' not in os.listdir():
+		os.chdir('..')
+	autoencoder.module.load_state_dict(torch.load('./autoencoder.pth'))
+	os.chdir(cwd)
+
+def loadDataset(folder, datasetType: str):
+	datasetParams = loadDatasetParams(folder, datasetType) 	
+	datasetInstance = dataset(
+		name = datasetParams['name'],
+		seed = eval(datasetParams['seed']),
+		obj_id = datasetParams['obj_id'],
+		purposeFlg = datasetParams['purposeFlg'],
+		tsFlg = datasetParams['tsFlg']
+		)
+	loadData(folder, datasetInstance)
+	return datasetInstance
+
+def loadData(folder, datasetInstance):
+	cwd = os.getcwd()
+	fileName = datasetInstance.name + '.csv'
+	while fileName not in os.listdir():
+		os.chdir('..')
+	datasetInstance.data = pd.read_csv('./'+fileName)
+	os.chdir(cwd)
+
+
+
+
+def loadDatasetParams(folder, datasetType: str):
+	cwd = os.getcwd()
+	fileName = 'parameters_'+datasetType+'.txt'
+	while fileName not in os.listdir():
+		os.chdir('..')
+	datasetParams = loadParamsFromJson(fileName)
+	os.chdir(cwd)
+	return datasetParams
+
+
 
 def storeSmtResult(smtResult, tmpFolderSmt):
 	# wrapper for different store functions depending on type of smtResult

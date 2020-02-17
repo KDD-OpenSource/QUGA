@@ -1,31 +1,31 @@
 import numpy as np
 import pandas as pd
-from .result import result
+from .resultAE import resultAE
 from ..utils import myUtils
+from itertools import product
 
-
-class avgError(result):
+class avgError(resultAE):
 	"""This class plots the reconstructed vs the original plot"""
 	def __init__(self, name ='avgError'):
-		super(avgError, self).__init__(name, aeSmtFlg = 'ae')
+		super(avgError, self).__init__(name)
 		self.algorithm = None
 		self.data = None
 		self.name = 'avgError'
 		self.avgError = None
+		self.result = None
 
-	def getResult(self, algorithm, trainData, testData):
+	def calcResult(self, algorithm, trainDataset, testDataset):
 		self.algorithm = algorithm
-		self.trainData = trainData
-		self.testData = testData
-		self.orig = np.array(self.testData.data)
-		if self.testData.tsFlg == True:
-			testData.timeseriesToPoints(windowLength = algorithm.architecture[0])
-			self.recon = np.array(algorithm.predict(self.testData.data))
-			self.avgError = pd.DataFrame([np.square(np.subtract(self.recon, self.testData.data)).sum(axis=1).mean()])
-			testData.pointsToTimeseries()
+		self.testDataset = testDataset
+		self.orig = np.array(self.testDataset.data)
+		if self.testDataset.tsFlg == True:
+			testDataset.timeseriesToPoints(windowLength = algorithm.architecture[0])
+			self.recon = np.array(algorithm.predict(self.testDataset.data))
+			self.avgError = pd.DataFrame([np.square(np.subtract(self.recon, self.testDataset.data)).sum(axis=1).mean()])
+			testDataset.pointsToTimeseries()
 		else:
 			raise Exception('avg Error for non-TS Data has not been tested')
-			# self.recon = np.array(algorithm.predict(self.testData.data))
-			# self.avgErrog = np.square(np.subtract(self.recon, self.testData.data)).sum(axis=1).mean()
+			# self.recon = np.array(algorithm.predict(self.testDataset.data))
+			# self.avgErrog = np.square(np.subtract(self.recon, self.testDataset.data)).sum(axis=1).mean()
 
-		return self.avgError
+		self.result = self.avgError

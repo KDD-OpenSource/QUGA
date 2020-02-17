@@ -1,8 +1,9 @@
 from src.algorithms import autoencoder, smtSolver
 from src.data import sineNoise, circleNoise
-from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack, avgError
+from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack, avgError, avgErrorArchPlot, maxAdversAttackArchPlot
 import torch.nn as nn
 import math
+import uuid
 
 from itertools import product
 
@@ -37,9 +38,9 @@ def getAlgorithms(seed):
 			# [60,10,6,10,60], 
 			# TODO 2 - 15
 			# [60,1,60],
-			[60,2,60],
-			[60,3,60],
-			[60,4,60],
+			[10,2,10],
+			[10,3,10],
+			# [60,4,60],
 			# [60,5,60],
 			# [60,6,60],
 			# [60,7,60],
@@ -67,7 +68,7 @@ def getDatasets(seed):
 			{	
 			'seed': [seed],
 			'purposeFlg': ['train','test'],
-			'length': [2000],
+			'length': [2000,2500],
 			'cycles': [16],
 			'var': [0.1],
 			'bounded': [False],
@@ -104,6 +105,8 @@ def getResults():
 	origReconTsPlot(),
 	# adversAttackPairQualPlot(),
 	# maxAdversAttack(),
-	avgError()
+	avgError(),
+	avgErrorArchPlot(),
+	maxAdversAttackArchPlot(accuracy = 1)
 	]	
 	return results

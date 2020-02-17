@@ -1,4 +1,4 @@
-"""main Module of AE_SMT Framework
+"""Main Module of AE_SMT Framework
 documentation of how things should be used should be later
 should provide the following:
 	-> choice of:
@@ -11,7 +11,6 @@ should provide the following:
 from src.utils.executeExperiments import executeExperiments
 from src.utils.experimentSettings import ExperimentSettings
 from src.utils.objectCreator import objectCreator, getAlgorithms, getDatasets, getSmts, getResults
-
 
 def main():
 	settings = getExperimentSettings()

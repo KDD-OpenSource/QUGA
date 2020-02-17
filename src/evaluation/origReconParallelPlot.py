@@ -5,13 +5,13 @@ This file implements the 'origReconParallelPlot' class which plots both the orig
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from .result import result
+from .resultAE import resultAE
 from ..utils import myUtils
 
-class origReconParallelPlot(result):
+class origReconParallelPlot(resultAE):
 	"""docstring for origReconParallelPlot"""
 	def __init__(self, name ='origReconParallelPlot'):
-		super(origReconParallelPlot, self).__init__(name, aeSmtFlg = 'ae')
+		super(origReconParallelPlot, self).__init__(name)
 		self.algorithm = None
 		self.trainData = None
 		self.testData = None
@@ -19,7 +19,7 @@ class origReconParallelPlot(result):
 		self.recon = None
 		self.figure = None
 
-	def getResult(self, algorithm, trainData, testData):
+	def calcResult(self, algorithm, trainData, testData):
 		self.algorithm = algorithm
 		self.trainData = trainData
 		self.testData = testData
@@ -38,4 +38,4 @@ class origReconParallelPlot(result):
 		ax[0].title.set_text('Original:')
 		ax[1].plot(self.recon, linewidth = 0.5, marker = '.')	
 		ax[1].title.set_text('Reconstruction:')
-		return fig
+		self.result = fig

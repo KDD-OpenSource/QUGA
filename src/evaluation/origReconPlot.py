@@ -1,20 +1,20 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from .result import result
+from .resultAE import resultAE
 from ..utils import myUtils
 
 
-class origReconPlot(result):
+class origReconPlot(resultAE):
 	"""This class plots the reconstructed vs the original plot"""
 	def __init__(self, name ='origReconPlot'):
-		super(origReconPlot, self).__init__(name, aeSmtFlg = 'ae')
+		super(origReconPlot, self).__init__(name)
 		self.algorithm = None
 		self.data = None
 		self.orig = None
 		self.recon = None
 		self.name = 'origReconPlot'
 
-	def getResult(self, algorithm, trainData, testData):
+	def calcResult(self, algorithm, trainData, testData):
 		self.algorithm = algorithm
 		self.trainData = trainData
 		self.testData = testData
@@ -37,4 +37,4 @@ class origReconPlot(result):
 		# ax[0].title.set_text('Original:')
 		# ax[1].plot(self.recon, linewidth = 0.5)	
 		# ax[1].title.set_text('Reconstruction:')
-		return fig
+		self.result = fig

@@ -105,7 +105,7 @@ class autoencoder(algorithm):
 		for key in list(algorithmDictAdj.keys()):
 			algorithmDictAdj[key] = str(algorithmDictAdj[key])
 		# algorithmDictAdj['test_name'] = test_name
-		with open('parameters.txt', 'w') as jsonFile:
+		with open('parameters_algorithm.txt', 'w') as jsonFile:
 			json.dump(algorithmDictAdj, jsonFile, indent = 0)
 
 		os.chdir(cwd)

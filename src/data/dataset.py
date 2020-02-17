@@ -2,13 +2,18 @@ import numpy as np
 import pandas as pd
 import os
 import uuid
+import json
+import copy
 
 class dataset():
 	"""this is the superclass for Datasets"""
-	def __init__(self, name, seed, purposeFlg, tsFlg):
+	def __init__(self, name, seed, purposeFlg, tsFlg, obj_id = None):
 		self.name = name
 		self.seed = seed
-		self.id = uuid.uuid4()
+		if obj_id == None:
+			self.obj_id = uuid.uuid4()
+		else:
+			self.obj_id = obj_id
 		self.purposeFlg = purposeFlg
 		self.tsFlg = tsFlg
 		self.data = None
@@ -52,3 +57,16 @@ class dataset():
 
 	def saveData(self, folder):
 		self.data.to_csv(folder + '\\'+str(self.name) + '.csv')
+		dataDict = copy.deepcopy(self.__dict__)
+		dataDict.pop('data')
+		for key in list(dataDict.keys()):
+			dataDict[key] = str(dataDict[key])
+		# algorithmDictAdj['test_name'] = test_name
+		if self.purposeFlg == 'train':
+			with open('parameters_trainDataset.txt', 'w') as jsonFile:
+				json.dump(dataDict, jsonFile, indent = 0)
+		elif self.purposeFlg == 'test':		
+			with open('parameters_testDataset.txt', 'w') as jsonFile:
+				json.dump(dataDict, jsonFile, indent = 0)
+		else:
+			raise Exception(f'The purposeFlg of the dataset {self.data.name} is neither train nor test')

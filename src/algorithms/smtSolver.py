@@ -7,7 +7,7 @@ import time
 class smtSolver():
 	def __init__(self, name, abstractConstr = None, numSolutions = 1, boundaryAroundSolution = 0.3):
 		self.name = name
-		self.id = uuid.uuid4()
+		self.obj_id = uuid.uuid4()
 		self.abstractConstr = abstractConstr
 		self.variables = []
 		self.aeConstr = []

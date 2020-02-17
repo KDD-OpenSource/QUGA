@@ -10,10 +10,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
-from .myUtils import splitDatasets, createFolderStructure, storeAEResult, addFolder, loadParamsFromJson, saveSmtSolutions, splitResults, loadAE, storeSmtResult
+from .myUtils import splitDatasets, createFolderStructure, addFolder, loadParamsFromJson, saveSmtSolutions, loadAE, storeSmtResult, loadDataset
 from ..data.dataset import dataset
 from ..algorithms.autoencoder import autoencoder
 from ..algorithms.smtSolver import smtSolver
+from ..evaluation.resultAE import resultAE
+from ..evaluation.resultSMT import resultSMT
 from itertools import product
 
 
@@ -27,76 +29,97 @@ def executeExperiments(
 	runFolder = createFolderStructure(settings.seed)
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'ae':
-		resultFolders = []
-		avgErrorDict = {'algorithm': [], 'avgError':[]}
-		for algorithm, trainDataset, testDataset, resultAE in product(algorithms, trainDatasets, testDatasets, resultsAE):
-			tmpFolderTrain, tmpFolderTest = addAEFolderstructure(runFolder, algorithm, trainDataset, testDataset)
-			algorithm.trainAE(trainDataset)
-			storeAEExperiment(algorithm, trainDataset, testDataset, resultAE, tmpFolderTrain, tmpFolderTest, settings)
-			resultFolders.append(tmpFolderTest)
+		# this executes all the experiments and calculates/stores the (single) results
+		trainDatasetAEFolders = execAEExperiments(algorithms, trainDatasets, testDatasets, resultsAE, runFolder)
 
-		# plotArchitectureAvgError(algorithms, testDatasets, resultsAE, runFolder)
+	# this calculates all the collected results
+		for resultAE in resultsAE:
+			if 'collResults' in resultAE.__dir__():
+				resultAE.calcCollectedAEResults()
+				resultAE.storeCollectedAEResults(runFolder)
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'smt':
-		# go through all folders in result folders, 
-		# maxAdversDict = []
+		execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT)
 
-		maxAdversDict = {'algorithm':[], 'maxAdversAttack':[]}
-		for folder, smt, resultSMT in product(resultFolders, smts, resultsSMT):
-			smt.clearSmt()
-			# The current problem is, that we have one smt object for all of the AE, but we need to have different smts for each AE
-			autoencoder = loadAE(folder)
-			tmpFolderSmt = addFolder(folder, smt)
-			resultSMT.getResult(autoencoder = autoencoder, trainData = None, testData = None, smt = smt)
-			storeSmtResult(resultSMT, tmpFolderSmt)
-			# maxAdversDict.append({'algorithm': autoencoder, 'maxAdversAttack': resultSMT.result})
-			maxAdversDict['algorithm'].append(autoencoder)
-			maxAdversDict['maxAdversAttack'].append(resultSMT.result)
-			print('Autoencoder: {}'.format(autoencoder.architecture))
+	# this calculates all the collected results
+		for resultSMT in resultsSMT:
+			if 'collResults' in resultSMT.__dir__():
+				resultSMT.calcCollectedSMTResults()
+				resultSMT.storeCollectedSMTResults(runFolder)
 
-		plotArchitectureMaxAdversAttack(maxAdversDict, runFolder)
-		# TODO: store final error as result to be plotted
+def execAEExperiments(algorithms, trainDatasets, testDatasets, resultsAE, runFolder):
+	trainDatasetAEFolders = []
+	for algorithm in algorithms:
+		trainDatasetAEFolders.extend(execFixedAlg(algorithm, trainDatasets, testDatasets, resultsAE, runFolder))
+	return trainDatasetAEFolders
 
+def execFixedAlg(algorithm, trainDatasets, testDatasets, resultsAE, runFolder):
+	trainDatasetAEFolders = []
+	for trainDataset in trainDatasets:
+		tmpFolderTrain = addAEFolderstructure(runFolder, algorithm, trainDataset)
+		algorithm.trainAE(trainDataset)
+		storeTrainedAE(algorithm, trainDataset, tmpFolderTrain)
+		trainDatasetAEFolders.append(tmpFolderTrain)
+		execFixedTrainDataset(algorithm, trainDataset, testDatasets, resultsAE, tmpFolderTrain)
+	return trainDatasetAEFolders
 
+def execFixedTrainDataset(algorithm, trainDataset, testDatasets, resultsAE, tmpFolderTrain):
+	for testDataset in testDatasets:
+		tmpFolderTest = addFolder(tmpFolderTrain, testDataset)
+		testDataset.saveData(tmpFolderTest)
+		execFixedTestDataset(algorithm, trainDataset, testDataset, resultsAE, tmpFolderTest)
+
+def execFixedTestDataset(algorithm, trainDataset, testDataset, resultsAE, tmpFolderTest):
+	for resultAE in resultsAE:
+		execFixedResultAE(algorithm, trainDataset, testDataset, resultAE, tmpFolderTest)
+
+def execFixedResultAE(algorithm, trainDataset, testDataset, resultAE, tmpFolderTest):
+	resultAE.calcResult(algorithm, trainDataset, testDataset)
+	resultAE.storeAEResult(tmpFolderTest, trainDataset,testDataset, algorithm, testName = 'test')
 
 def decomposeObjects(objects):
 	trainDatasets, testDatasets, validationDatasets = splitDatasets(objects[1])
-	resultsAE, resultsSMT = splitResults(objects[3], 'ae', 'smt')
-
+	resultsAE, resultsSMT = splitResults(objects[3])
 	return objects[0], trainDatasets, testDatasets, validationDatasets, objects[2], resultsAE, resultsSMT
 
-def plotArchitectureMaxAdversAttack(maxAdversDict, runFolder):
-		AEArchitectures = [x.architecture for x in maxAdversDict['algorithm']]
-		y_pos = np.arange(len(AEArchitectures))
-		maxAdversAttacks = maxAdversDict['maxAdversAttack']
-		errors = [0.1 for i in range(len(maxAdversAttacks))]
-		plt.errorbar(y_pos, maxAdversAttacks, errors, linestyle='None')
-
-		# plt.bar(y_pos, maxAdversAttacks)
-		plt.xticks(y_pos, AEArchitectures)
-		plt.savefig(runFolder + '//'+'plot_with_errors.png')
-
-def addAEFolderstructure(runFolder, algorithm, trainDataset, testDataset):
+def addAEFolderstructure(runFolder, algorithm, trainDataset):
 	tmpFolderAlg = addFolder(runFolder, algorithm)
 	tmpFolderTrain = addFolder(tmpFolderAlg, trainDataset)
-	tmpFolderTest = addFolder(tmpFolderTrain, testDataset)
-	return tmpFolderTrain, tmpFolderTest,
+	return tmpFolderTrain
 
-def storeAEExperiment(algorithm, trainDataset, testDataset, resultAE, tmpFolderTrain, tmpFolderTest, settings):
+def storeTrainedAE(algorithm, trainDataset, tmpFolderTrain):
 	trainDataset.saveData(tmpFolderTrain)
-	testDataset.saveData(tmpFolderTest)
 	algorithm.saveAE(tmpFolderTrain)
-	storeAEResult(tmpFolderTest, trainDataset, testDataset, algorithm, resultAE, testName = settings.testName)
 
-def plotArchitectureAvgError(algorithms, datasets, resultsAE, runFolder):
-	for dataset in datasets:
+def splitResults(results):
+	resultsAE = []
+	resultsSmt = []
+	for elem in results:
+		if isinstance(elem, resultAE):
+			resultsAE.append(elem)
+		elif isinstance(elem, resultSMT):
+			resultsSmt.append(elem)
+		else:
+			raise Exception('Any result should belong a result type indicated by a given flg')
+	return resultsAE, resultsSmt
 
-		AEArchitectures = [x.architecture for x in algorithms]
-		y_pos = np.arange(len(AEArchitectures))
-		avgErrorResults = [result for result in resultsAE if result.name == 'avgError']
-		# plt.plot(y_pos, avgErrors)
-		import pdb; pdb.set_trace()
-		errors = [0.1 for i in range(len(avgErrors))]
-		plt.errorbar(y_pos, avgErrors, errors, linestyle='None')
-		plt.xticks(y_pos, AEArchitectures)
-		plt.savefig(runFolder + '//'+'avgErrors_'+dataset.name[:5])
+def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
+	for folder in trainDatasetAEFolders:
+		execFixedFolder(folder, smts, resultsSMT)
+
+def execFixedFolder(folder, smts, resultsSMT):
+	autoencoder = loadAE(folder)
+	trainDataset = loadDataset(folder, 'trainDataset')
+	for smt in smts:
+		execFixedSMT(folder, smt, resultsSMT, autoencoder, trainDataset)
+
+def execFixedSMT(folder, smt, resultsSMT, autoencoder, trainDataset):
+	tmpFolderSmt = addFolder(folder, smt)
+	for resultSMT in resultsSMT:
+		execFixedResultSMT(smt, resultSMT, autoencoder, tmpFolderSmt, trainDataset)
+
+def execFixedResultSMT(smt, resultSMT, autoencoder, tmpFolderSmt, trainDataset):
+	smt.clearSmt()
+	resultSMT.calcResult(algorithm = autoencoder, trainDataset = trainDataset,  smt = smt)
+	resultSMT.storeSMTResult(tmpFolderSmt)
+	print(f'Autoencoder: {autoencoder.architecture}')

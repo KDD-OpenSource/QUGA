@@ -2,14 +2,14 @@
 This file implements the 'adversAttackPairQualPlot' class, which is a result that plots one advers. attack in parallel coordinates. I.e. it gets the solution from an smt-solver and visualizes them next to each other. 
 """
 
-from .result import result
+from .resultSMT import resultSMT
 from ..utils.myUtils import solutionsToPoints
 import matplotlib.pyplot as plt
 import time
 
-class adversAttackPairQualPlot(result):
+class adversAttackPairQualPlot(resultSMT):
 	def __init__(self, name = 'adversAttackPairQualPlot'):
-		super(adversAttackPairQualPlot, self).__init__(name, aeSmtFlg = 'smt')
+		super(adversAttackPairQualPlot, self).__init__(name)
 		self.result = None
 		self.smtSolutions = None
 

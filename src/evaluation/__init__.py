@@ -4,6 +4,8 @@ from .origReconPairPlot import origReconPairPlot
 from .adversAttackPairQualPlot import adversAttackPairQualPlot
 from .maxAdversAttack import maxAdversAttack
 from .avgError import avgError
+from .avgErrorArchPlot import avgErrorArchPlot
+from .maxAdversAttackArchPlot import maxAdversAttackArchPlot
 
 __all__ = [
 	'origReconTsPlot',
@@ -11,5 +13,7 @@ __all__ = [
 	'origReconPairPlot',
 	'adversAttackPairQualPlot',
 	'maxAdversAttack',
-	'avgError'
+	'avgError',
+	'avgErrorArchPlot',
+	'maxAdversAttackArchPlot'
 	]

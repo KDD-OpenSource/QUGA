@@ -5,14 +5,14 @@ This file implements the 'origReconPairPlot' class which plots both the original
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from .result import result
+from .resultAE import resultAE
 from ..utils import myUtils
 from itertools import product
 
-class origReconPairPlot(result):
+class origReconPairPlot(resultAE):
 	"""docstring for origReconPairPlot"""
 	def __init__(self, name ='origReconPairPlot'):
-		super(origReconPairPlot, self).__init__(name, aeSmtFlg = 'ae')
+		super(origReconPairPlot, self).__init__(name)
 		self.algorithm = None
 		self.trainData = None
 		self.testData = None
@@ -21,7 +21,7 @@ class origReconPairPlot(result):
 		self.figure = None
 		self.numDims = None
 
-	def getResult(self, algorithm, trainData, testData):
+	def calcResult(self, algorithm, trainData, testData):
 		self.algorithm = algorithm
 		self.trainData = trainData
 		self.testData = testData
@@ -38,4 +38,4 @@ class origReconPairPlot(result):
 		for i,j in product(range(self.numDims), range(self.numDims)):
 			ax[i,j].scatter(self.orig[:,i], self.orig[:,j], color = 'blue')
 			ax[i,j].scatter(self.recon[:,i], self.recon[:,j], color = 'orange')
-		return fig
+			self.result = fig

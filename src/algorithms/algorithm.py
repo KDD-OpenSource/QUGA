@@ -10,7 +10,7 @@ import uuid
 class algorithm(metaclass = abc.ABCMeta):
 	def __init__(self, name, seed, architecture, lr, batch_size, epochs):
 		self.name = name
-		self.id = uuid.uuid4()
+		self.obj_id = uuid.uuid4()
 		self.seed = seed
 		self.lr = lr
 		self.batch_size = batch_size
