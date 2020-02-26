@@ -1,6 +1,6 @@
 from src.algorithms import autoencoder, smtSolver
 from src.data import sineNoise, circleNoise
-from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack, avgError, avgErrorArchPlot, maxAdversAttackArchPlot
+from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack, avgError, avgErrorArchPlot, maxAdversAttackArchPlot, maxAdversAttackQualPlot, latentSpaceSMTPlot, latentSpaceSMTPlot3D
 import torch.nn as nn
 import math
 import uuid
@@ -30,23 +30,61 @@ def getAlgorithms(seed):
 			{
 			'architecture': [
 			# works really well: [10,3,10]
-			# [60,10,1,10,60], 
-			# [60,10,2,10,60], 
-			# [60,10,3,10,60], 
-			# [60,10,4,10,60], 
-			# [60,10,5,10,60], 
-			# [60,10,6,10,60], 
-			# TODO 2 - 15
-			# [60,1,60],
-			[10,2,10],
-			[10,3,10],
-			# [60,4,60],
-			# [60,5,60],
-			# [60,6,60],
-			# [60,7,60],
-			# [60,8,60],
-			# [60,9,60],
-			# [60,10,60]
+			# [60,3,60],
+			# [5,3,5],
+			# [5,3,5],
+			# [30,3,30],
+
+			# [30,3,30],
+			[15,5,15],
+			[15,5,15],
+			[15,5,15],
+			# [15,5,15],
+			# [15,5,15],
+			# [15,5,15],
+			# [15,5,15],
+			# [15,5,15],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+			# [30,3,30],
+
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# [30,5,30],
+			# # [30,10,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+			# [30,7,30],
+
+			# [50,10,50],
+			# [50,10,50],
+			# [50,10,50],
+			# [50,10,50],
+			# [50,10,50],
+			# [50,10,50],
+			# [50,10,50],
+			# [50,10,50]
+			# [60,15,60]
 			],
 			'seed': [seed],
 			'lr': [0.001],
@@ -68,8 +106,8 @@ def getDatasets(seed):
 			{	
 			'seed': [seed],
 			'purposeFlg': ['train','test'],
-			'length': [2000,2500],
-			'cycles': [16],
+			'length': [2500],
+			'cycles': [50],
 			'var': [0.1],
 			'bounded': [False],
 			}
@@ -82,16 +120,30 @@ def getSmts():
 		{"objectType": smtSolver,
 		"arguments":
 			{
-			# 'abstractConstr \in advers_attack{proximity, severity}, customBoundingBox(dimensionBounds), bounding_box(number))'
-			# if for a certain result we need to dynamically change any given constraint, we present the starting values here
 			'abstractConstr': [
 				{
-				'adversAttack': {'severity': 20},
-				# 'adversAttackPair': {'proximity':0.2, 'severity': 1},
+				'adversAttack': {'severity': 2},
+				# 'adversAttackPair': {'proximity':0.2, 'severity': 0.3},
 				# 'customBoundingBox' : [[0,0.2] for i in range(40)],
-				'customBoundingBox' : [[-1,1] for i in range(60)],
-				# 'customBoundingBox' : [[math.sin((2*math.pi*x+40)/125)-0.01,math.sin((2*math.pi*x+40)/125)+0.01] for x in range(60)]
+				'customBoundingBox' : [[math.sin((2*math.pi*x+0)/50)-0.01,math.sin((2*math.pi*x+0)/50)+0.01] for x in range(15)]
+				# 'customBoundingBox' : [[-1,1] for i in range(60)],
+				# 'customBoundingBox' : [[math.sin((2*math.pi*x+0)/125)-0.01,math.sin((2*math.pi*x)/125)+0.01] for x in range(60)]
 				}
+			,			
+				{
+				'adversAttack': {'severity': 2},
+				'customBoundingBox' : [[-1,1] for i in range(15)]
+				}
+			# ,			
+			# 	{
+			# 	'adversAttack': {'severity': 10},
+			# 	'customBoundingBox' : [[math.sin((2*math.pi*x+60)/50)-0.01,math.sin((2*math.pi*x+60)/50)+0.01] for x in range(50)]
+			# 	}
+			# ,			
+			# 	{
+			# 	'adversAttack': {'severity': 10},
+			# 	'customBoundingBox' : [[math.sin((2*math.pi*x+90)/50)-0.01,math.sin((2*math.pi*x+90)/50)+0.01] for x in range(50)]
+			# 	}
 			],
 			'numSolutions' : [5],
 			'boundaryAroundSolution': [0.1],
@@ -104,9 +156,12 @@ def getResults():
 	results = [
 	origReconTsPlot(),
 	# adversAttackPairQualPlot(),
-	# maxAdversAttack(),
+	maxAdversAttack(),
 	avgError(),
 	avgErrorArchPlot(),
-	maxAdversAttackArchPlot(accuracy = 1)
+	maxAdversAttackArchPlot(accuracy = 0.1),
+	maxAdversAttackQualPlot(accuracy = 0.1),
+	# latentSpaceSMTPlot3D(accuracy = 0.1),
+	# latentSpaceSMTPlot(accuracy = 0.1)
 	]	
 	return results

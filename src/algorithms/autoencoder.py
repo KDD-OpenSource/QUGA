@@ -78,9 +78,18 @@ class autoencoder(algorithm):
 		return dataPredictedDf
 
 	def getLatentSpace(self, data: pd.DataFrame):
-		data = data.values.astype('float32')
+		data = data.values.astype(np.float32)
+		# dataTorch = torch.tensor(data)
+
 		latentSpace = [self.module(record)[0] for record in DataLoader(data)]
-		return sequencesOutput
+		latentSpaceDF = pd.DataFrame([point.detach().numpy().flatten() for point in latentSpace])
+		# return sequencesOutput
+		return latentSpaceDF
+
+	def getLatentSpaceDim(self):
+		numLayers = len(self.architecture)
+		return self.architecture[math.ceil(numLayers/2)-1]
+
 
 	def trainAE(self, trainData):
 		if trainData.tsFlg == True:
@@ -109,6 +118,7 @@ class autoencoder(algorithm):
 			json.dump(algorithmDictAdj, jsonFile, indent = 0)
 
 		os.chdir(cwd)
+
 
 
 class autoencoderModule(nn.Module):

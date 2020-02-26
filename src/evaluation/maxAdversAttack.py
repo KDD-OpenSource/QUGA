@@ -5,7 +5,7 @@ from .resultSMT import resultSMT
 # from ..utils.myUtils import solutionsToPoints
 import matplotlib.pyplot as plt
 import time
-from ..utils.myUtils import saveSmtSolutions
+# from ..utils.myUtils import saveSmtSolutions
 
 
 class maxAdversAttack(resultSMT):
@@ -18,10 +18,12 @@ class maxAdversAttack(resultSMT):
 	def calcResult(self, algorithm, trainDataset, smt):
 		if 'adversAttack' in smt.abstractConstr:
 			smt.addAEConstr(algorithm)
-			self.result, self.smtSolutions = smt.calcMaxAdversAttack(startValue = smt.abstractConstr['adversAttack']['severity'], accuracy = self.accuracy)
+			maxAdversAttack = smt.getMaxAdversAttack(startValue = smt.abstractConstr['adversAttack']['severity'], accuracy = self.accuracy, algorithm = algorithm, trainDataset = trainDataset)
+			self.result  = maxAdversAttack['severity']
+			self.smtSolutions = maxAdversAttack['smtModel']
 
 	def storeSMTResult(self, tmpFolderSmt):
-		saveSmtSolutions(self.smtSolutions, tmpFolderSmt)
+		self.saveSmtSolutions(tmpFolderSmt)
 		file = './maxAdversAttackSeverity.csv'
 		with open(file, 'w') as file:
 			file.write('\n')

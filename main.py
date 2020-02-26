@@ -1,11 +1,4 @@
 """Main Module of AE_SMT Framework
-documentation of how things should be used should be later
-should provide the following:
-	-> choice of:
-		-> datasets 
-		-> SMT and AE variations
-		-> evaluation results/types of graphs to be plotted 
-			=> each is a list of object that are created in the list
 """
 
 from src.utils.executeExperiments import executeExperiments
@@ -20,7 +13,8 @@ def main():
 
 def getExperimentSettings():
 	settings = ExperimentSettings()
-	settings.testName = 'My_Test'
+	settings.testName = 'EveryResultSineWavePart'
+	settings.description = ''
 	settings.experimentScope = 'ae_smt'
 	settings.resultFolders = None
 	return settings

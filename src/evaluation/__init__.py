@@ -6,6 +6,9 @@ from .maxAdversAttack import maxAdversAttack
 from .avgError import avgError
 from .avgErrorArchPlot import avgErrorArchPlot
 from .maxAdversAttackArchPlot import maxAdversAttackArchPlot
+from .maxAdversAttackQualPlot import maxAdversAttackQualPlot
+from .latentSpaceSMTPlot import latentSpaceSMTPlot
+from .latentSpaceSMTPlot3D import latentSpaceSMTPlot3D
 
 __all__ = [
 	'origReconTsPlot',
@@ -15,5 +18,8 @@ __all__ = [
 	'maxAdversAttack',
 	'avgError',
 	'avgErrorArchPlot',
-	'maxAdversAttackArchPlot'
+	'maxAdversAttackArchPlot',
+	'maxAdversAttackQualPlot',
+	'latentSpaceSMTPlot',
+	'latentSpaceSMTPlot3D'
 	]

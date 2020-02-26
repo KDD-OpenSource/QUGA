@@ -3,6 +3,7 @@ import numpy as np
 import uuid
 from itertools import product
 import time
+import json
 
 class smtSolver():
 	def __init__(self, name, abstractConstr = None, numSolutions = 1, boundaryAroundSolution = 0.3):
@@ -20,18 +21,7 @@ class smtSolver():
 		self.solver = Solver()
 		self.numSolutions = numSolutions
 		self.boundaryAroundSolution = boundaryAroundSolution
-		# self.max_solution = True?
-
-	# def construct_smt_solver(self, autoencoder):
-	# 	self.constructAEMatrixBias(autoencoder)
-	# 	for list, res in zip([self.variables, self.aeConstr], self.constructNetConstr('x')):
-	# 		list.extend(res)
-	# 	self.solver = Solver()
-	# 	for elem in self.abstractConstr:
-	# 		self.customConstr.extend(self.customConstrConstructer(elem))
-	# 	self.solver.add(self.aeConstr)
-	# 	self.solver.add(self.customConstr)
-	# 	self.numConstr = len(self.solver.assertions())
+		self.maxAdversAttack = []
 
 	def addAEConstr(self, autoencoder):
 		self.constructAEMatrixBias(autoencoder)
@@ -40,9 +30,10 @@ class smtSolver():
 		self.solver.add(self.aeConstr)
 		self.numConstr = len(self.solver.assertions())
 
-	def addCustomConstr(self):
+	def addCustomConstr(self, exceptions = []):
 		for elem in self.abstractConstr:
-			self.customConstr.extend(self.customConstrConstructer(elem))
+			if elem not in exceptions:
+				self.customConstr.extend(self.customConstrConstructer(elem))
 		self.solver.add(self.customConstr)
 		self.numConstr = len(self.solver.assertions())
 
@@ -52,37 +43,25 @@ class smtSolver():
 		if abstractConstr == 'adversAttack':
 			customConstrs.extend(self.getAdversAttConstr(self.abstractConstr['adversAttack']['severity']))
 
-			# TODO I think the outer 'And' is useless (though it does no harm) -> check that
-			# orConstrs = []
-			# for i in range(len(self.variables[0])):
-			# 	orConstrs.extend([self.variables[0][i] - self.variables[len(self.variables)-1][i] > self.abstractConstr['adversAttack']['severity'],self.variables[len(self.variables)-1][i] - self.variables[0][i] > self.abstractConstr['adversAttack']['severity']])
-			# customConstrs.append(Or(orConstrs))
 		if abstractConstr == 'adversAttackPair':
 			for list, res in zip([self.variables, customConstrs], self.constructNetConstr('y')):
 				list.extend(res)
 			firstSmtVars = [var for var in self.variables if str(var[0])[2] == '0']
 			customConstrs.extend([Or(And(firstSmtVars[0][i] - firstSmtVars[1][i] < self.abstractConstr['adversAttackPair']['proximity'], firstSmtVars[0][i]-firstSmtVars[1][i] >= 0), And(firstSmtVars[1][i] - firstSmtVars[0][i]  < self.abstractConstr['adversAttackPair']['proximity'],firstSmtVars[1][i] -firstSmtVars[0][i] >= 0)) for i in range(len(firstSmtVars[0]))])
 
-			# find out the number of layers by using only the self.variables
 			allX = [x for x in self.variables if str(x[0])[0]=='x']
 			largestLayer = max([int(str(x[0])[2]) for x in allX])
 			lastLayerVars = [x for x in self.variables if str(x[0])[2] == str(largestLayer)]
-			# TODO Insert the following as parameter into 'abstractConstr'
-			# this is for 1 dimension having distance more than severity
 			orConstrs = []
 			for i in range(len(lastLayerVars[0])):
 				orConstrs.extend([lastLayerVars[0][i] - lastLayerVars[1][i] > self.abstractConstr['adversAttackPair']['severity'], lastLayerVars[1][i] - lastLayerVars[0][i]  > self.abstractConstr['adversAttackPair']['severity']])
 			customConstrs.append(Or(orConstrs))
-			# this is for all the dimensions having distance more than severity
-			# customConstrs.extend([Or(lastLayerVars[0][i] - lastLayerVars[1][i] > self.abstractConstr['adversAttackPair']['severity'], lastLayerVars[1][i] - lastLayerVars[0][i]  > self.abstractConstr['adversAttackPair']['severity']) for i in range(len(lastLayerVars[0]))])
 		if abstractConstr == 'boundingBox':
 			customConstrs.extend([And(self.variables[0][i] < self.abstractConstr['boundingBox'], self.variables[0][i] > -self.abstractConstr['boundingBox']) for i in range(len(self.variables[0]))])
 
 						# 'customBoundingBox' : [[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2]]
 		if abstractConstr == 'customBoundingBox':
 			customConstrs.extend([And(self.variables[0][i] < self.abstractConstr['customBoundingBox'][i][1],self.variables[0][i] > self.abstractConstr['customBoundingBox'][i][0]) for i in range(len(self.variables[0]))])
-
-
 		return customConstrs
 
 	def constructNetConstr(self, varName):
@@ -90,7 +69,6 @@ class smtSolver():
 		matrixLength = len(self.netWeightMatrices)
 		for layer in range(matrixLength):
 			smtVars.append([Real(varName+'_' +str(layer)+'_'+str(i)) for i in range(self.netWeightMatrices[layer].shape[0])])
-
 		Constr = []
 		# for layer, destNeuron in product(range(1,matrixLength-1), range(len(smtVars[layer]))):
 		for layer in range(1,matrixLength-1):
@@ -98,8 +76,8 @@ class smtSolver():
 				weightedSum = Sum([self.netWeightMatrices[layer][destNeuron][sourceNeuron] * smtVars[layer-1][sourceNeuron] for sourceNeuron in range(len(smtVars[layer-1]))])
 				Constr.append(smtVars[layer][destNeuron] == If(weightedSum + self.netBiases[layer-1][destNeuron] < 0, 0, weightedSum + self.netBiases[layer-1][destNeuron]))
 		for destNeuron in range(len(smtVars[matrixLength-1])):
+			weightedSum = Sum([self.netWeightMatrices[matrixLength-1][destNeuron][sourceNeuron] * smtVars[matrixLength-1-1][sourceNeuron] for sourceNeuron in range(len(smtVars[matrixLength-1-1]))])
 			Constr.append(smtVars[matrixLength-1][destNeuron] == weightedSum + self.netBiases[matrixLength-2][destNeuron])
-
 		return smtVars, Constr
 
 
@@ -139,7 +117,6 @@ class smtSolver():
 			raise Exception('the variable \'satisfiable\' of the smt model does not have a valid value.')
 
 	def calculateSolutions(self):
-		# TODO make solutions a list of dictionaries in which there are two fields: calcDuration and solution
 		solutions = []
 		count = 0
 		start = time.time()
@@ -169,45 +146,60 @@ class smtSolver():
 	def addAbstractConstraint(constraint):
 		pass
 
-	def calcMaxAdversAttack(self, startValue, accuracy):
+	def getMaxAdversAttack(self, startValue, accuracy, algorithm, trainDataset):
+		for maxAdversAttack in self.maxAdversAttack:
+			if [algorithm, trainDataset] == maxAdversAttack['algTrainPair']:
+				return maxAdversAttack
+		self.calcMaxAdversAttack(startValue, accuracy, algorithm, trainDataset)
+		maxAdversAttackFiltered = [x for x in self.maxAdversAttack if x['algTrainPair'] == [algorithm,trainDataset]]
+		return maxAdversAttackFiltered[0]
+
+	def calcMaxAdversAttack(self, startValue, accuracy, algorithm, trainDataset):
 		# Add all custom Constraints, but the adversAttack Constraints
-		for elem in self.abstractConstr:
-			if elem is not 'adversAttack':
-				self.customConstr.extend(self.customConstrConstructer(elem))
-		self.solver.add(self.customConstr)
-		self.numConstr = len(self.solver.assertions())
-		bestSmtSolution = None
+		self.addCustomConstr(exceptions = ['adversAttack'])
+		currentBestSmtSolution = None
+		startValue = self.getStartValueMaxAdvers(startValue = startValue)
+		severity = startValue
+		severityChange = severity/2
+		while(2*severityChange > accuracy or currentBestSmtSolution == None):
+			currentBestSmtSolution, severity, severityChange = self.updateMaxAdversAttack(severity, severityChange, currentBestSmtSolution)
+		self.maxAdversAttack.append({'severity': severity, 'smtModel': [currentBestSmtSolution], 'algTrainPair': [algorithm, trainDataset]})
+
+	def getStartValueMaxAdvers(self, startValue = 20):
 		self.solver.push()
 		adversAttConstr = self.getAdversAttConstr(startValue)
 		self.solver.add(adversAttConstr)
 		self.satisfiable = self.solver.check()
-		severity = startValue
-		severity_change = severity/2
-		while(2*severity_change > accuracy):
-			if self.satisfiable == unsat:
-				severity = severity - severity_change
-			else:
-				severity = severity + severity_change
-			severity_change = severity_change/2	
+		while self.satisfiable == sat:
+			startValue = startValue * 2
+			print(f'Raising the maxAdversAttack to {startValue}')
 			self.solver.pop()
 			self.solver.push()
-			adversAttConstr = self.getAdversAttConstr(severity)
+			adversAttConstr = self.getAdversAttConstr(startValue)
 			self.solver.add(adversAttConstr)
-			start = time.time()
 			self.satisfiable = self.solver.check()
-			end = time.time()
-			calcDuration = end - start
-			if self.satisfiable == sat:
-				bestSmtSolution = {'model': self.solver.model(), 'calcDuration': calcDuration}
-		return severity, [bestSmtSolution]
+			print('checks model')
+		return startValue
 
-		# now I have a function that guarantees, that the resulting model is within a treshold of a bound.
-		# TODO Add saving the existing maximum solution
-		# Note that at the beginning we are (almost certainly) unsatisfiable
-
-
-
-		# return maxSolution
+	def updateMaxAdversAttack(self, severity, severityChange, currentBestSmtSolution):
+		if self.satisfiable == unsat:
+			severity = severity - severityChange
+		else:
+			severity = severity + severityChange
+		severityChange = severityChange/2	
+		self.solver.pop()
+		self.solver.push()
+		adversAttConstr = self.getAdversAttConstr(severity)
+		self.solver.add(adversAttConstr)
+		start = time.time()
+		self.satisfiable = self.solver.check()
+		print('checks model')
+		print(severity)
+		end = time.time()
+		calcDuration = end - start
+		if self.satisfiable == sat:
+			currentBestSmtSolution = {'model': self.solver.model(), 'calcDuration': calcDuration}
+		return currentBestSmtSolution, severity, severityChange
 
 	def getAdversAttConstr(self, severity):
 		# TODO I think the outer 'And' is useless (though it does no harm) -> check that
@@ -233,3 +225,15 @@ class smtSolver():
 		self.solver = Solver()
 		self.numSolutions = self.numSolutions
 		self.boundaryAroundSolution = self.boundaryAroundSolution
+
+	def saveSMTParameters(self, folder):
+		cwd = os.getcwd()
+		os.chdir(folder)
+		smtDict = {}
+		smtDict['name'] = str(self.__dict__['name'])
+		smtDict['obj_id'] = str(self.__dict__['obj_id'])
+		smtDict['abstractConstr'] = str(self.__dict__['abstractConstr'])
+		with open('parameters_smt.txt', 'w') as jsonFile:
+			json.dump(smtDict, jsonFile, indent = 0)
+
+		os.chdir(cwd)

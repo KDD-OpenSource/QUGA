@@ -93,33 +93,33 @@ def loadParamsFromJson(file):
 	return data
 	# print(data)
 
-def saveSmtSolutions(solutions, tmpFolderSmt):
-	if solutions == [None]:
-		pass
-	else:
-		cwd = os.getcwd()
-		os.chdir(tmpFolderSmt)
-		file = './smtSolutions.csv'
-		with open(file, 'w') as file:
-			# file.write('Time used for calculation (in seconds): ')
-			# file.write(str(timeForCalc))
-			# file.write('\n')	
-			solutionCount = 0
-			for solution in solutions:
-				solutionCount = solutionCount + 1
-				file.write('Solution: {}'.format(solutionCount))
-				file.write('Time used for calculation (in seconds): {}'.format(solution['calcDuration']))
-				file.write('\n')
-				for elem in solution['model']:
-					file.write(str(elem))
-					file.write(': ')
-					numerator = solution['model'][elem].numerator_as_long()
-					denominator = solution['model'][elem].denominator_as_long()
-					decimal = float(numerator/denominator)
-					file.write(str(decimal))
-					file.write('\n')
-				file.write('\n')
-		os.chdir(cwd)
+# def saveSmtSolutions(solutions, tmpFolderSmt):
+# 	if solutions == [None]:
+# 		pass
+# 	else:
+# 		cwd = os.getcwd()
+# 		os.chdir(tmpFolderSmt)
+# 		file = './smtSolutions.csv'
+# 		with open(file, 'w') as file:
+# 			# file.write('Time used for calculation (in seconds): ')
+# 			# file.write(str(timeForCalc))
+# 			# file.write('\n')	
+# 			solutionCount = 0
+# 			for solution in solutions:
+# 				solutionCount = solutionCount + 1
+# 				file.write('Solution: {}'.format(solutionCount))
+# 				file.write('Time used for calculation (in seconds): {}'.format(solution['calcDuration']))
+# 				file.write('\n')
+# 				for elem in solution['model']:
+# 					file.write(str(elem))
+# 					file.write(': ')
+# 					numerator = solution['model'][elem].numerator_as_long()
+# 					denominator = solution['model'][elem].denominator_as_long()
+# 					decimal = float(numerator/denominator)
+# 					file.write(str(decimal))
+# 					file.write('\n')
+# 				file.write('\n')
+# 		os.chdir(cwd)
 
 
 # def splitResults(results, flg1, flg2):
@@ -199,7 +199,7 @@ def loadDataset(folder, datasetType: str):
 		seed = eval(datasetParams['seed']),
 		obj_id = datasetParams['obj_id'],
 		purposeFlg = datasetParams['purposeFlg'],
-		tsFlg = datasetParams['tsFlg']
+		tsFlg = eval(datasetParams['tsFlg'])
 		)
 	loadData(folder, datasetInstance)
 	return datasetInstance
@@ -209,7 +209,7 @@ def loadData(folder, datasetInstance):
 	fileName = datasetInstance.name + '.csv'
 	while fileName not in os.listdir():
 		os.chdir('..')
-	datasetInstance.data = pd.read_csv('./'+fileName)
+	datasetInstance.data = pd.read_csv('./'+fileName, header = 0, index_col = 0)
 	os.chdir(cwd)
 
 

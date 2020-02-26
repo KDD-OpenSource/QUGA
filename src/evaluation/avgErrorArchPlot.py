@@ -37,11 +37,11 @@ class avgErrorArchPlot(resultAE):
 		AEArchitectures = sorted([x.architecture for x in tmpDataFrame['algorithm']])
 		y_pos = np.arange(len(AEArchitectures))
 		avgErrors = tmpDataFrame['avgError'].values.tolist()
-		fig = plt.figure()
+		fig = plt.figure(figsize = (20,10))
 		plt.plot(y_pos, avgErrors, marker = '.')
 		axes = plt.gca()
 		axes.set_ylim([0,1.1*maxError])
-		plt.xticks(y_pos, AEArchitectures)
+		plt.xticks(y_pos, AEArchitectures, rotation = 90)
 		return fig
 
 	def storeCollectedAEResults(self, runFolder):

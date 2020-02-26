@@ -4,20 +4,19 @@ Furthermore it creates the respective folder-structure and thereafter stores the
 """
 
 import os
-import datetime
 import time
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
-from .myUtils import splitDatasets, createFolderStructure, addFolder, loadParamsFromJson, saveSmtSolutions, loadAE, storeSmtResult, loadDataset
+from .myUtils import splitDatasets, createFolderStructure, addFolder, loadParamsFromJson, loadAE, storeSmtResult, loadDataset
 from ..data.dataset import dataset
 from ..algorithms.autoencoder import autoencoder
 from ..algorithms.smtSolver import smtSolver
 from ..evaluation.resultAE import resultAE
 from ..evaluation.resultSMT import resultSMT
 from itertools import product
-
+import multiprocessing as mp
 
 def executeExperiments(
 	settings,
@@ -25,14 +24,13 @@ def executeExperiments(
 	):
 	algorithms, trainDatasets, testDatasets, validationDatasets, smts, resultsAE, resultsSMT = decomposeObjects(objects)
 
-	currentTime = datetime.datetime.now()
 	runFolder = createFolderStructure(settings.seed)
+	start = time.time()
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'ae':
 		# this executes all the experiments and calculates/stores the (single) results
 		trainDatasetAEFolders = execAEExperiments(algorithms, trainDatasets, testDatasets, resultsAE, runFolder)
-
-	# this calculates all the collected results
+		# this calculates all the collected results
 		for resultAE in resultsAE:
 			if 'collResults' in resultAE.__dir__():
 				resultAE.calcCollectedAEResults()
@@ -40,12 +38,15 @@ def executeExperiments(
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'smt':
 		execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT)
-
-	# this calculates all the collected results
+		# this calculates all the collected results
 		for resultSMT in resultsSMT:
 			if 'collResults' in resultSMT.__dir__():
 				resultSMT.calcCollectedSMTResults()
 				resultSMT.storeCollectedSMTResults(runFolder)
+
+	end = time.time()
+	calcTime = end-start
+	writeSettingsFile(settings, calcTime, runFolder)
 
 def execAEExperiments(algorithms, trainDatasets, testDatasets, resultsAE, runFolder):
 	trainDatasetAEFolders = []
@@ -104,8 +105,12 @@ def splitResults(results):
 	return resultsAE, resultsSmt
 
 def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
-	for folder in trainDatasetAEFolders:
-		execFixedFolder(folder, smts, resultsSMT)
+	pool = mp.Pool(mp.cpu_count())
+	# for folder in trainDatasetAEFolders:
+		# I think this is the spot to apply pooling to
+	import pdb; pdb.set_trace()
+	[pool.apply_async(execFixedFolder, args = (folder, smts, resultsSMT)) for folder in trainDatasetAEFolders]
+	pool.close()
 
 def execFixedFolder(folder, smts, resultsSMT):
 	autoencoder = loadAE(folder)
@@ -115,6 +120,7 @@ def execFixedFolder(folder, smts, resultsSMT):
 
 def execFixedSMT(folder, smt, resultsSMT, autoencoder, trainDataset):
 	tmpFolderSmt = addFolder(folder, smt)
+	smt.saveSMTParameters(tmpFolderSmt)
 	for resultSMT in resultsSMT:
 		execFixedResultSMT(smt, resultSMT, autoencoder, tmpFolderSmt, trainDataset)
 
@@ -123,3 +129,11 @@ def execFixedResultSMT(smt, resultSMT, autoencoder, tmpFolderSmt, trainDataset):
 	resultSMT.calcResult(algorithm = autoencoder, trainDataset = trainDataset,  smt = smt)
 	resultSMT.storeSMTResult(tmpFolderSmt)
 	print(f'Autoencoder: {autoencoder.architecture}')
+
+def writeSettingsFile(settings, calcTime, folder):
+	file = folder + '\\' + settings.testName + '.txt'
+	with open(file, 'w') as file:
+		file.write(f'This run took {calcTime} seconds.')
+		file.write('\n')
+		file.write(settings.description)
+
