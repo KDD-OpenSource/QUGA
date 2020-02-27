@@ -178,6 +178,7 @@ def loadAE(folder):
 
 def loadAEParam(folder):
 	cwd = os.getcwd()
+	os.chdir(folder)
 	while 'autoencoder.pth' not in os.listdir():
 		os.chdir('..')
 
@@ -187,6 +188,7 @@ def loadAEParam(folder):
 
 def loadAEState(folder, autoencoder):
 	cwd = os.getcwd()
+	os.chdir(folder)
 	while 'autoencoder.pth' not in os.listdir():
 		os.chdir('..')
 	autoencoder.module.load_state_dict(torch.load('./autoencoder.pth'))
@@ -206,6 +208,7 @@ def loadDataset(folder, datasetType: str):
 
 def loadData(folder, datasetInstance):
 	cwd = os.getcwd()
+	os.chdir(folder)
 	fileName = datasetInstance.name + '.csv'
 	while fileName not in os.listdir():
 		os.chdir('..')
@@ -217,6 +220,7 @@ def loadData(folder, datasetInstance):
 
 def loadDatasetParams(folder, datasetType: str):
 	cwd = os.getcwd()
+	os.chdir(folder)
 	fileName = 'parameters_'+datasetType+'.txt'
 	while fileName not in os.listdir():
 		os.chdir('..')

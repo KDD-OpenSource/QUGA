@@ -7,6 +7,7 @@ import uuid
 
 from itertools import product
 
+
 def objectCreator(kwargs):
 	objectDicts = []
 	for elem in kwargs:
@@ -36,9 +37,10 @@ def getAlgorithms(seed):
 			# [30,3,30],
 
 			# [30,3,30],
-			[15,5,15],
-			[15,5,15],
-			[15,5,15],
+			[10,3,10]
+			# [15,5,15],
+			# [15,5,15],
+			# [15,5,15],
 			# [15,5,15],
 			# [15,5,15],
 			# [15,5,15],
@@ -125,14 +127,14 @@ def getSmts():
 				'adversAttack': {'severity': 2},
 				# 'adversAttackPair': {'proximity':0.2, 'severity': 0.3},
 				# 'customBoundingBox' : [[0,0.2] for i in range(40)],
-				'customBoundingBox' : [[math.sin((2*math.pi*x+0)/50)-0.01,math.sin((2*math.pi*x+0)/50)+0.01] for x in range(15)]
+				'customBoundingBox' : [[math.sin((2*math.pi*x+0)/50)-0.01,math.sin((2*math.pi*x+0)/50)+0.01] for x in range(10)]
 				# 'customBoundingBox' : [[-1,1] for i in range(60)],
 				# 'customBoundingBox' : [[math.sin((2*math.pi*x+0)/125)-0.01,math.sin((2*math.pi*x)/125)+0.01] for x in range(60)]
 				}
 			,			
 				{
 				'adversAttack': {'severity': 2},
-				'customBoundingBox' : [[-1,1] for i in range(15)]
+				'customBoundingBox' : [[-1,1] for i in range(10)]
 				}
 			# ,			
 			# 	{

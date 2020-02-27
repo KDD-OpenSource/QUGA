@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
+import torch.nn as nn
 from .myUtils import splitDatasets, createFolderStructure, addFolder, loadParamsFromJson, loadAE, storeSmtResult, loadDataset
 from ..data.dataset import dataset
 from ..algorithms.autoencoder import autoencoder
@@ -16,16 +17,16 @@ from ..algorithms.smtSolver import smtSolver
 from ..evaluation.resultAE import resultAE
 from ..evaluation.resultSMT import resultSMT
 from itertools import product
-import multiprocessing as mp
+
 
 def executeExperiments(
 	settings,
 	objects,
 	):
 	algorithms, trainDatasets, testDatasets, validationDatasets, smts, resultsAE, resultsSMT = decomposeObjects(objects)
-
 	runFolder = createFolderStructure(settings.seed)
 	start = time.time()
+
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'ae':
 		# this executes all the experiments and calculates/stores the (single) results
@@ -35,6 +36,20 @@ def executeExperiments(
 			if 'collResults' in resultAE.__dir__():
 				resultAE.calcCollectedAEResults()
 				resultAE.storeCollectedAEResults(runFolder)
+
+	# print autoencoder weights
+	for algorithm in algorithms:
+		for layer in algorithm.module.encoder:
+			if isinstance(layer, nn.Linear):
+				print(layer.weight)
+		for layer in algorithm.module.decoder:
+			if isinstance(layer, nn.Linear):
+				print(layer.weight)
+
+	if settings.experimentScope =='smt':
+		trainDatasetAEFolders = settings.resultFolders
+
+
 
 	if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'smt':
 		execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT)
@@ -105,12 +120,8 @@ def splitResults(results):
 	return resultsAE, resultsSmt
 
 def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
-	pool = mp.Pool(mp.cpu_count())
-	# for folder in trainDatasetAEFolders:
-		# I think this is the spot to apply pooling to
-	import pdb; pdb.set_trace()
-	[pool.apply_async(execFixedFolder, args = (folder, smts, resultsSMT)) for folder in trainDatasetAEFolders]
-	pool.close()
+	for folder in trainDatasetAEFolders:
+		execFixedFolder(folder, smts, resultsSMT)
 
 def execFixedFolder(folder, smts, resultsSMT):
 	autoencoder = loadAE(folder)

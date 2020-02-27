@@ -19,6 +19,7 @@ class smtSolver():
 		self.netBiases = None
 		self.satisfiable = None
 		self.solver = Solver()
+		# self.solver = None
 		self.numSolutions = numSolutions
 		self.boundaryAroundSolution = boundaryAroundSolution
 		self.maxAdversAttack = []
