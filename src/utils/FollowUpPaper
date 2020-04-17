@@ -1,0 +1,4 @@
+With the SMT Technology we can guarantee to find one dimensional anomalies with an AE as follows:
+-define a new criterion for anomalies based on 'mapped into normal area or not', rather than 'take distance as measured by MSE'
+-find the largest distance for one dimension that still maps inte predefined region (which has to be given).
+	-> everything else must map outside of that and will henceforth be called anomaly
