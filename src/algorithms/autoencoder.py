@@ -32,12 +32,13 @@ class autoencoder(algorithm):
 		seed,
 		architecture,
 		bias,
+		obj_id = None,
 		lr = 0.0001,
 		batchSize = 20,
 		activationFct = nn.ReLU(),
 		initialization = nn.init.xavier_normal_,
 		epochs = 5):
-		algorithm.__init__(self, name, seed, architecture, lr, batchSize, epochs)
+		algorithm.__init__(self, name, seed, architecture, lr, batchSize, epochs, obj_id)
 		# self.seq_length = architecture[0]
 		self.activationFct = activationFct
 		self.initialization = initialization
@@ -86,6 +87,17 @@ class autoencoder(algorithm):
 		# return sequencesOutput
 		return latentSpaceDF
 
+	def getAEResults(self, data: pd.DataFrame):
+		data = data.values.astype(np.float32)
+		# dataTorch = torch.tensor(data)
+
+		latentSpace = [self.module(record)[0] for record in DataLoader(data)]
+		result = [self.module(record)[1] for record in DataLoader(data)]
+		latentSpaceDF = pd.DataFrame([point.detach().numpy().flatten() for point in latentSpace])
+		resultDF = pd.DataFrame([point.detach().numpy().flatten() for point in result])
+		# return sequencesOutput
+		return latentSpaceDF, resultDF
+
 	def getLatentSpaceDim(self):
 		numLayers = len(self.architecture)
 		return self.architecture[math.ceil(numLayers/2)-1]
@@ -109,7 +121,7 @@ class autoencoder(algorithm):
 		os.chdir(folder)
 		# TODO: take care of the following problem:
 		# We do not go into the folder 'folder', but we do so for 'save_data'
-		torch.save(self.module.state_dict(), folder +  '\\autoencoder.pth')
+		torch.save(self.module.state_dict(), folder +  '/autoencoder.pth')
 		algorithmDictAdj = copy.deepcopy(self.__dict__)
 		for key in list(algorithmDictAdj.keys()):
 			algorithmDictAdj[key] = str(algorithmDictAdj[key])

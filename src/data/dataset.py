@@ -7,7 +7,7 @@ import copy
 
 class dataset():
 	"""this is the superclass for Datasets"""
-	def __init__(self, name, seed, purposeFlg, tsFlg, obj_id = None):
+	def __init__(self, name, seed, purposeFlg, tsFlg, windowStep = 1, obj_id = None):
 		self.name = name
 		self.seed = seed
 		if obj_id == None:
@@ -17,6 +17,7 @@ class dataset():
 		self.purposeFlg = purposeFlg
 		self.tsFlg = tsFlg
 		self.data = None
+		self.windowStep = windowStep
 
 	# NOTE THAT THE CHANGES HAPPEN INPLACE
 	def boundedData(data: pd.DataFrame):
@@ -33,7 +34,10 @@ class dataset():
 			pass
 		else:
 			flattenedData = np.array(self.data).flatten()
-			windows = [flattenedData[i:i+windowLength] for i in range(self.data.shape[0]-windowLength+1)]
+			if (flattenedData.shape[0] - windowLength)%self.windowStep == 0:
+				windows = [flattenedData[i*self.windowStep:i*self.windowStep+windowLength] for i in range(int((self.data.shape[0]-windowLength)/self.windowStep)+1)]
+			else:
+				raise Exception('Could not divide time series into autoencoder data, because windowLength, windowLength and the length of the Timeseries do not fit together.')
 			self.data = pd.DataFrame(windows)
 			self.tsFlg = False
 
@@ -45,28 +49,32 @@ class dataset():
 		else:
 			# largeMatrix = np.empty(shape =(self.data.shape[0]+windowLength - 1, self.data.shape[0]))
 			windowLength = self.data.shape[1]
+			if self.windowStep > windowLength:
+				raise Exception('Your time window is shorter than the window step. You will end up with a TS with nan-values.')
 			numWindows = self.data.shape[0]
-			largeMatrix = np.empty(shape =(numWindows, numWindows+windowLength-1))
+			# largeMatrix = np.empty(shape =(numWindows, numWindows+windowLength-1))
+			largeMatrix = np.empty(shape =(numWindows, windowLength + (numWindows-1) * self.windowStep))
 			largeMatrix[:] = np.nan
 			for i in range(numWindows):
-				largeMatrix[i,i:i+windowLength] = self.data.iloc[i]
+				largeMatrix[i,i*self.windowStep:i*self.windowStep+windowLength] = self.data.iloc[i]
 
 			timeseriesResult = np.nanmean(largeMatrix, axis = 0)
 			self.data = pd.DataFrame(timeseriesResult)
 			self.tsFlg = True
 
 	def saveData(self, folder):
-		self.data.to_csv(folder + '\\'+str(self.name) + '.csv')
+		self.data.to_csv(folder + '/'+str(self.name) + '.csv')
 		dataDict = copy.deepcopy(self.__dict__)
 		dataDict.pop('data')
 		for key in list(dataDict.keys()):
 			dataDict[key] = str(dataDict[key])
 		# algorithmDictAdj['test_name'] = test_name
 		if self.purposeFlg == 'train':
-			with open('parameters_trainDataset.txt', 'w') as jsonFile:
+			with open(folder + '/' + 'parameters_trainDataset.txt', 'w') as jsonFile:
 				json.dump(dataDict, jsonFile, indent = 0)
 		elif self.purposeFlg == 'test':		
-			with open('parameters_testDataset.txt', 'w') as jsonFile:
+			with open(folder + '/' + 'parameters_testDataset.txt', 'w') as jsonFile:
 				json.dump(dataDict, jsonFile, indent = 0)
 		else:
-			raise Exception(f'The purposeFlg of the dataset {self.data.name} is neither train nor test')
+			# raise Exception(f'The purposeFlg of the dataset {self.data.name} is neither train nor test')
+			raise Exception('The purposeFlg of the dataset is neither train nor test')

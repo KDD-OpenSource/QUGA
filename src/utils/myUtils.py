@@ -37,40 +37,16 @@ def createFolderStructure(seed):
 
 	cwd = os.getcwd()
 	print(cwd)
-	folderPathDate = os.getcwd() + '\\results\\' + str(currentTime.strftime("%Y.%m.%d"))
+	folderPathDate = os.getcwd() + '/results/' + str(currentTime.strftime("%Y.%m.%d"))
 	createAndChangeWD(folderPathDate)	
 
-	folderPathSeed = os.getcwd() + '\\' + str(seed)[:5]
+	folderPathSeed = os.getcwd() + '/' + str(seed)[:5]
 	createAndChangeWD(folderPathSeed)
 
 	return folderPathSeed
 
 
-
-# def storeAEResult(folder, trainDataset,testDataset, algorithm, result, testName):
-# 	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
-# 	cwd = os.getcwd()
-# 	os.chdir(folder)
-# 	resultToBeSaved = result.getResult(algorithm, trainDataset, testDataset)
-
-# 	if isinstance(resultToBeSaved, plt.Figure):
-# 		resultToBeSaved.suptitle(f'Alg: {algorithm.name},\n Train-Dataset: {trainDataset.name}, \n Test-Dataset: {testDataset.name}')
-# 		plt.savefig(os.getcwd()+'\\'+str(result.name))
-# 		plt.close('all')
-# 	elif isinstance(resultToBeSaved, pd.DataFrame):
-# 		resultToBeSaved.to_csv(os.getcwd()+'\\'+str(result.name) + '.csv', header = False)
-# 	else:
-# 		print("Your result is not in the appropriate format, hence it did not get saved")
-# 		#some other code
-# 	if result.name  == 'pwDistance':
-# 		sequencePlotPw = sequencePlotInd(seed = result.seed)
-# 		pwDistFig = sequencePlotPw.getResult(algorithm, trainDataset, testDataset, resultToBeSaved.iloc[-1:,-2:])
-# 		plt.savefig(os.getcwd() + '\\' + str('pwDistancePlot'))
-# 		plt.close('all')
-
-# 	os.chdir(cwd)
-
-def pointsToTimeseries(points: np.array):
+def pointsToTimeseries(points: np.array, windowStep = 1):
 	# one could think about incorporating a window_step 
 	# this function averages for each point in time over the windows
 	if len(points.shape) != 2:
@@ -79,13 +55,14 @@ def pointsToTimeseries(points: np.array):
 		# largeMatrix = np.empty(shape =(points.shape[0]+windowLength - 1, points.shape[0]))
 		windowLength = points.shape[1]
 		numWindows = points.shape[0]
-		largeMatrix = np.empty(shape =(numWindows, numWindows+windowLength-1))
+		largeMatrix = np.empty(shape =(numWindows, windowLength + (numWindows-1) * windowStep))
 		largeMatrix[:] = np.nan
 		for i in range(numWindows):
-			largeMatrix[i,i:i+windowLength] = points[i]
-
+			largeMatrix[i,i*windowStep:i*windowStep+windowLength] = points[i]
 		timeseriesResult = np.nanmean(largeMatrix, axis = 0)
 		return pd.DataFrame(timeseriesResult)
+
+
 
 def loadParamsFromJson(file):
 	with open(file) as jsonFile:
@@ -148,17 +125,26 @@ def loadParamsFromJson(file):
 # 	return resultsAE, resultsSmt
 
 
-def addFolder(folder, object):
+def addFolder(folder, fold_object):
 	'''
-	This function adds a new folder inside the folder 'folder' with the name given by 'object'. It then switches to the new folder and returns its value.	
+	This function adds a new folder inside the folder 'folder' with the name given by 'fold_object'. It then switches to the new folder and returns its value.	
 	'''
-	os.chdir(folder)
-	newFolderPath = os.getcwd() + \
-		'\\' + \
-		object.name[:5] + '_' + str(object.obj_id)[:5]
-	if not os.path.exists(newFolderPath):
-		os.mkdir(newFolderPath)
-	os.chdir(newFolderPath)
+	# os.chdir(folder)
+	# print(folder)
+	# print(fold_object)
+	newFolderPath = folder + \
+		'/' + \
+		fold_object.name[:5] + '_' + str(fold_object.obj_id)[:5]
+	try:
+	   if not os.path.exists(newFolderPath):
+	       os.makedirs(newFolderPath)
+	except OSError as err:
+	   print(err)
+
+
+	# if not os.path.exists(newFolderPath):
+	# 	os.mkdir(newFolderPath)
+	# os.chdir(newFolderPath)
 
 	return newFolderPath
 
@@ -170,6 +156,7 @@ def loadAE(folder):
 		seed = eval(aeParameters['seed']),
 		architecture = eval(aeParameters['architecture']),
 		bias = eval(aeParameters['bias']),
+		obj_id = aeParameters['obj_id'],
 		# We are a little bit sloppy here, as we do not read torch.nn.ReLU() from the parameters file. In this particular situation that is ok, because SMT can only deal with ReLUs anyway
 		activationFct = torch.nn.ReLU(),
 		)
@@ -177,22 +164,22 @@ def loadAE(folder):
 	return modelAE
 
 def loadAEParam(folder):
-	cwd = os.getcwd()
-	os.chdir(folder)
-	while 'autoencoder.pth' not in os.listdir():
-		os.chdir('..')
-
-	aeParameters = loadParamsFromJson('parameters_algorithm.txt')
-	os.chdir(cwd)
+	while 'autoencoder.pth' not in os.listdir(folder):
+		folder = folder[:folder.rfind('/')]
+	aeParameters = loadParamsFromJson(folder + '/'+'parameters_algorithm.txt')
 	return aeParameters	
 
+# def loadAEState(folder, autoencoder):
+# 	cwd = os.getcwd()
+# 	os.chdir(folder)
+# 	while 'autoencoder.pth' not in os.listdir():
+# 		os.chdir('..')
+# 	autoencoder.module.load_state_dict(torch.load('./autoencoder.pth'))
+# 	os.chdir(cwd)
 def loadAEState(folder, autoencoder):
-	cwd = os.getcwd()
-	os.chdir(folder)
-	while 'autoencoder.pth' not in os.listdir():
-		os.chdir('..')
-	autoencoder.module.load_state_dict(torch.load('./autoencoder.pth'))
-	os.chdir(cwd)
+	while 'autoencoder.pth' not in os.listdir(folder):
+		folder = folder[:folder.rfind('/')]
+	autoencoder.module.load_state_dict(torch.load(folder + '/autoencoder.pth'))
 
 def loadDataset(folder, datasetType: str):
 	datasetParams = loadDatasetParams(folder, datasetType) 	
@@ -207,25 +194,16 @@ def loadDataset(folder, datasetType: str):
 	return datasetInstance
 
 def loadData(folder, datasetInstance):
-	cwd = os.getcwd()
-	os.chdir(folder)
 	fileName = datasetInstance.name + '.csv'
-	while fileName not in os.listdir():
-		os.chdir('..')
-	datasetInstance.data = pd.read_csv('./'+fileName, header = 0, index_col = 0)
-	os.chdir(cwd)
-
-
-
+	while fileName not in os.listdir(folder):
+		folder = folder[:folder.rfind('/')]
+	datasetInstance.data = pd.read_csv(folder +'/'+fileName, header = 0, index_col = 0)
 
 def loadDatasetParams(folder, datasetType: str):
-	cwd = os.getcwd()
-	os.chdir(folder)
 	fileName = 'parameters_'+datasetType+'.txt'
-	while fileName not in os.listdir():
-		os.chdir('..')
-	datasetParams = loadParamsFromJson(fileName)
-	os.chdir(cwd)
+	while fileName not in os.listdir(folder):
+		folder = folder[:folder.rfind('/')]
+	datasetParams = loadParamsFromJson(folder + '/' + fileName)
 	return datasetParams
 
 
@@ -242,7 +220,7 @@ def storeAdvAttPairResult(smtResult, tmpFolderSmt):
 	# here smtResult is a figure
 	saveSmtSolutions(smtResult.smtSolutions, tmpFolderSmt)
 	plt.figure = smtResult.result
-	plt.savefig(os.getcwd()+'\\'+str(smtResult.name))
+	plt.savefig(os.getcwd()+'/'+str(smtResult.name))
 	plt.close('all')
 
 def storeMaxAdvAtt(smtResult, tmpFolderSmt):
@@ -281,3 +259,14 @@ def createAndChangeWD(folder):
 	if not os.path.exists(folder):
 		os.mkdir(folder)
 	os.chdir(folder)
+
+
+
+def test_AE_SMTSolution(autoencoder, resultSMT):
+	smtSolutions = resultSMT.smtSolutions
+	points = solutionsToPoints(smtSolutions, ['x_0','x_1', 'x_2'])
+	print(points)
+	pointsDF = pd.DataFrame(points[0][0]).transpose()
+	print(pointsDF)
+	autoencoderSolution = autoencoder.getAEResults(pointsDF)
+	print(autoencoderSolution)

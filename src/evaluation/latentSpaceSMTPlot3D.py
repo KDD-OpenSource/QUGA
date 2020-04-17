@@ -52,7 +52,7 @@ class latentSpaceSMTPlot3D(resultSMT):
 		ax.scatter(trainLatentPoints.iloc[:,0], trainLatentPoints.iloc[:,1], trainLatentPoints.iloc[:,2], color = 'blue')
 		ax.scatter(maxAdversLatentPoint.iloc[:,0], maxAdversLatentPoint.iloc[:,1], maxAdversLatentPoint.iloc[:,2], color = 'red')
 		minDistancesToAdversLatent = euclidean_distances(trainLatentPoints, maxAdversLatentPoint).min()
-		fig.suptitle(f'The minimum distance of any Datapoint to the maxAdversLatentPoint is {minDistancesToAdversLatent}')
+		fig.suptitle('The minimum distance of any Datapoint to the maxAdversLatentPoint is {}'.format(minDistancesToAdversLatent))
 		return fig
 
 	def storeSMTResult(self, tmpFolderSmt):
@@ -61,6 +61,6 @@ class latentSpaceSMTPlot3D(resultSMT):
 			cwd = os.getcwd()
 			os.chdir(tmpFolderSmt)
 			plt.figure(self.result.number)
-			plt.savefig(os.getcwd()+'\\'+str(self.name))
+			plt.savefig(os.getcwd()+'/'+str(self.name))
 			plt.close('all')
 			os.chdir(cwd)

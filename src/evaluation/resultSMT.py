@@ -40,3 +40,4 @@ class resultSMT(result):
 						file.write('\n')
 					file.write('\n')
 			os.chdir(cwd)
+

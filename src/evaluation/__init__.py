@@ -3,12 +3,22 @@ from .origReconParallelPlot import origReconParallelPlot
 from .origReconPairPlot import origReconPairPlot
 from .adversAttackPairQualPlot import adversAttackPairQualPlot
 from .maxAdversAttack import maxAdversAttack
+from .maxSumAdversAttack import maxSumAdversAttack
 from .avgError import avgError
-from .avgErrorArchPlot import avgErrorArchPlot
-from .maxAdversAttackArchPlot import maxAdversAttackArchPlot
+from .avgErrorAEParamPlot import avgErrorAEParamPlot
+from .maxAdversAttackAEParamPlot import maxAdversAttackAEParamPlot
 from .maxAdversAttackQualPlot import maxAdversAttackQualPlot
 from .latentSpaceSMTPlot import latentSpaceSMTPlot
 from .latentSpaceSMTPlot3D import latentSpaceSMTPlot3D
+from .maxAdversGrowingBoxPlot import maxAdversGrowingBoxPlot
+from .maxErrorEst import maxErrorEst
+from .maxLInftyErrorEst import maxLInftyErrorEst
+from .maxErrorEstAEParamPlot import maxErrorEstAEParamPlot
+from .joinedAEParamPlot import joinedAEParamPlot
+from .maxAdversAttackErrorEstAEParamPlot import maxAdversAttackErrorEstAEParamPlot
+from .theoMaxErrorEstAEParamPlot import theoMaxErrorEstAEParamPlot
+from .maxAdversMovingBoxPlot import maxAdversMovingBoxPlot
+from .timeMaxErrorPlot import timeMaxErrorPlot
 
 __all__ = [
 	'origReconTsPlot',
@@ -16,10 +26,20 @@ __all__ = [
 	'origReconPairPlot',
 	'adversAttackPairQualPlot',
 	'maxAdversAttack',
+	'maxSumAdversAttack',
 	'avgError',
-	'avgErrorArchPlot',
-	'maxAdversAttackArchPlot',
+	'avgErrorAEParamPlot',
+	'maxAdversAttackAEParamPlot',
 	'maxAdversAttackQualPlot',
 	'latentSpaceSMTPlot',
-	'latentSpaceSMTPlot3D'
+	'latentSpaceSMTPlot3D',
+	'maxAdversGrowingBoxPlot', 
+	'maxErrorEst',
+	'maxErrorEstAEParamPlot',
+	'joinedAEParamPlot',
+	'maxAdversAttackErrorEstAEParamPlot',
+	'theoMaxErrorEstAEParamPlot',
+	'maxAdversMovingBoxPlot',
+	'maxLInftyErrorEst',
+	'timeMaxErrorPlot'
 	]

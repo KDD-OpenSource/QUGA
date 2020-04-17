@@ -8,9 +8,12 @@ import numpy as np
 import uuid
 
 class algorithm(metaclass = abc.ABCMeta):
-	def __init__(self, name, seed, architecture, lr, batch_size, epochs):
+	def __init__(self, name, seed, architecture, lr, batch_size, epochs, obj_id):
 		self.name = name
-		self.obj_id = uuid.uuid4()
+		if obj_id == None:
+			self.obj_id = uuid.uuid4()
+		else:
+			self.obj_id = obj_id
 		self.seed = seed
 		self.lr = lr
 		self.batch_size = batch_size

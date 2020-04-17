@@ -1,9 +1,11 @@
 from z3 import *
+# import z3solver
 import numpy as np
 import uuid
 from itertools import product
 import time
 import json
+import os
 
 class smtSolver():
 	def __init__(self, name, abstractConstr = None, numSolutions = 1, boundaryAroundSolution = 0.3):
@@ -18,11 +20,12 @@ class smtSolver():
 		self.netWeightMatrices = None
 		self.netBiases = None
 		self.satisfiable = None
-		self.solver = Solver()
-		# self.solver = None
+		# self.solver = Solver()
+		self.solver = None
 		self.numSolutions = numSolutions
 		self.boundaryAroundSolution = boundaryAroundSolution
 		self.maxAdversAttack = []
+		self.maxSumAdversAttack = []
 
 	def addAEConstr(self, autoencoder):
 		self.constructAEMatrixBias(autoencoder)
@@ -62,7 +65,12 @@ class smtSolver():
 
 						# 'customBoundingBox' : [[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2]]
 		if abstractConstr == 'customBoundingBox':
-			customConstrs.extend([And(self.variables[0][i] < self.abstractConstr['customBoundingBox'][i][1],self.variables[0][i] > self.abstractConstr['customBoundingBox'][i][0]) for i in range(len(self.variables[0]))])
+			tmpSATProblem = Solver()
+			tmpSATProblem.add([And(self.variables[0][i] < self.abstractConstr['customBoundingBox'][i][1],self.variables[0][i] > self.abstractConstr['customBoundingBox'][i][0]) for i in range(len(self.variables[0]))])
+			if tmpSATProblem.check() == sat:
+				customConstrs.extend([And(self.variables[0][i] < self.abstractConstr['customBoundingBox'][i][1],self.variables[0][i] > self.abstractConstr['customBoundingBox'][i][0]) for i in range(len(self.variables[0]))])
+			else:
+				raise Exception('Your Custom bounding box given by {} does not allow for a solution. Adjust it!'.format(tmpSATProblem.assertions()))
 		return customConstrs
 
 	def constructNetConstr(self, varName):
@@ -157,14 +165,20 @@ class smtSolver():
 
 	def calcMaxAdversAttack(self, startValue, accuracy, algorithm, trainDataset):
 		# Add all custom Constraints, but the adversAttack Constraints
+		# print('In the beginning of calcMaxAdversAttack the startValue is {}'.format(startValue))
 		self.addCustomConstr(exceptions = ['adversAttack'])
 		currentBestSmtSolution = None
+		start = time.time()
 		startValue = self.getStartValueMaxAdvers(startValue = startValue)
 		severity = startValue
 		severityChange = severity/2
+		# print('After calculating the startValue severity is {}, severityChange is {} and satisfiable is {}'.format(severity, severityChange, self.satisfiable))
+
 		while(2*severityChange > accuracy or currentBestSmtSolution == None):
 			currentBestSmtSolution, severity, severityChange = self.updateMaxAdversAttack(severity, severityChange, currentBestSmtSolution)
-		self.maxAdversAttack.append({'severity': severity, 'smtModel': [currentBestSmtSolution], 'algTrainPair': [algorithm, trainDataset]})
+		end = time.time()
+		calcTime = end-start
+		self.maxAdversAttack.append({'severity': severity, 'calcTime' : calcTime,'smtModel': [currentBestSmtSolution], 'algTrainPair': [algorithm, trainDataset]})
 
 	def getStartValueMaxAdvers(self, startValue = 20):
 		self.solver.push()
@@ -173,16 +187,22 @@ class smtSolver():
 		self.satisfiable = self.solver.check()
 		while self.satisfiable == sat:
 			startValue = startValue * 2
-			print(f'Raising the maxAdversAttack to {startValue}')
+			# print('Raising the maxAdversAttack to {}'.format(startValue))
 			self.solver.pop()
 			self.solver.push()
 			adversAttConstr = self.getAdversAttConstr(startValue)
 			self.solver.add(adversAttConstr)
 			self.satisfiable = self.solver.check()
-			print('checks model')
+			# print('checks model')
+		print(startValue)
 		return startValue
 
 	def updateMaxAdversAttack(self, severity, severityChange, currentBestSmtSolution):
+		# if currentBestSmtSolution == None:
+			# print('currentBestSmtSolution is None')
+		# else:
+			# print('currentBestSmtSolution is not None')
+		# print('At the beginning of updateMaxAdversAttack severity is {}, severityChange is {}.'.format(severity, severityChange))
 		if self.satisfiable == unsat:
 			severity = severity - severityChange
 		else:
@@ -211,6 +231,7 @@ class smtSolver():
 		customConstrs.append(Or(orConstrs))
 		return customConstrs
 
+
 	def clearSmt(self):
 		self.name = self.name
 		self.id = uuid.uuid4()
@@ -228,13 +249,85 @@ class smtSolver():
 		self.boundaryAroundSolution = self.boundaryAroundSolution
 
 	def saveSMTParameters(self, folder):
-		cwd = os.getcwd()
-		os.chdir(folder)
 		smtDict = {}
 		smtDict['name'] = str(self.__dict__['name'])
 		smtDict['obj_id'] = str(self.__dict__['obj_id'])
 		smtDict['abstractConstr'] = str(self.__dict__['abstractConstr'])
-		with open('parameters_smt.txt', 'w') as jsonFile:
+		with open(folder + '/'+ 'parameters_smt.txt', 'w') as jsonFile:
 			json.dump(smtDict, jsonFile, indent = 0)
 
-		os.chdir(cwd)
+
+	def getSumAdversAttConstr(self, severity):
+		customConstrs = []
+		absValueSum = Sum([If(self.variables[0][i] - self.variables[len(self.variables)-1][i] > 0, self.variables[0][i] - self.variables[len(self.variables)-1][i], self.variables[len(self.variables)-1][i] - self.variables[0][i]) for i in range(len(self.variables[0]))])
+		constr = (absValueSum > severity)
+		customConstrs.append(constr)
+		print(constr)
+		# TEST THIS ONE
+		return customConstrs
+
+	def getMaxSumAdversAttack(self, startValue, accuracy, algorithm, trainDataset):
+		for maxSumAdversAttack in self.maxSumAdversAttack:
+			if [algorithm, trainDataset] == maxSumAdversAttack['algTrainPair']:
+				return maxSumAdversAttack
+		self.calcMaxSumAdversAttack(startValue, accuracy, algorithm, trainDataset)
+		maxSumAdversAttackFiltered = [x for x in self.maxSumAdversAttack if x['algTrainPair'] == [algorithm,trainDataset]]
+		return maxSumAdversAttackFiltered[0]
+
+	def calcMaxSumAdversAttack(self, startValue, accuracy, algorithm, trainDataset):
+		# Add all custom Constraints, but the adversAttack Constraints
+		print('In the beginning of calcMaxSumAdversAttack the startValue is {}'.format(startValue))
+		time.sleep(2)
+		self.addCustomConstr(exceptions = ['sumAdversAttack'])
+		currentBestSmtSolution = None
+		startValue = self.getStartValueMaxSumAdvers(startValue = startValue)
+		severity = startValue
+		severityChange = severity/2
+		print('For maxSum: After calculating the startValue severity is {}, severityChange is {} and satisfiable is {}'.format(severity, severityChange, self.satisfiable))
+		time.sleep(2)
+		while(2*severityChange > accuracy or currentBestSmtSolution == None):		
+			time.sleep(2)
+			currentBestSmtSolution, severity, severityChange = self.updateMaxSumAdversAttack(severity, severityChange, currentBestSmtSolution)
+		self.maxSumAdversAttack.append({'severity': severity, 'smtModel': [currentBestSmtSolution], 'algTrainPair': [algorithm, trainDataset]})
+
+	def getStartValueMaxSumAdvers(self, startValue = 20):
+		self.solver.push()
+		sumAdversAttConstr = self.getSumAdversAttConstr(startValue)
+		self.solver.add(sumAdversAttConstr)
+		self.satisfiable = self.solver.check()
+		while self.satisfiable == sat:
+			startValue = startValue * 2
+			print('Raising the maxSumAdversAttack to {}'.format(startValue))
+			self.solver.pop()
+			self.solver.push()
+			sumAdversAttConstr = self.getSumAdversAttConstr(startValue)
+			self.solver.add(sumAdversAttConstr)
+			self.satisfiable = self.solver.check()
+			print('checks model')
+		print(startValue)
+		return startValue
+
+	def updateMaxSumAdversAttack(self, severity, severityChange, currentBestSmtSolution):
+		if currentBestSmtSolution == None:
+			print('currentBestSmtSolution is None')
+		else:
+			print('currentBestSmtSolution is not None')
+		print('At the beginning of updateMaxSumAdversAttack severity is {}, severityChange is {}.'.format(severity, severityChange))
+		if self.satisfiable == unsat:
+			severity = severity - severityChange
+		else:
+			severity = severity + severityChange
+		severityChange = severityChange/2	
+		self.solver.pop()
+		self.solver.push()
+		sumAdversAttConstr = self.getSumAdversAttConstr(severity)
+		self.solver.add(sumAdversAttConstr)
+		start = time.time()
+		self.satisfiable = self.solver.check()
+		print('checks model')
+		print(severity)
+		end = time.time()
+		calcDuration = end - start
+		if self.satisfiable == sat:
+			currentBestSmtSolution = {'model': self.solver.model(), 'calcDuration': calcDuration}
+		return currentBestSmtSolution, severity, severityChange

@@ -44,7 +44,7 @@ class adversAttackPairQualPlot(resultSMT):
 			cwd = os.getcwd()
 			os.chdir(tmpFolderSmt)
 			plt.figure(self.result.number)
-			plt.savefig(os.getcwd()+'\\'+str(self.name))
+			plt.savefig(os.getcwd()+'/'+str(self.name))
 			plt.close('all')
 			os.chdir(cwd)
 

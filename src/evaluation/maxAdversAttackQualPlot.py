@@ -7,6 +7,7 @@ from ..utils.myUtils import solutionsToPoints
 import matplotlib.pyplot as plt
 import time
 import os
+import tikzplotlib as tikz
 
 class maxAdversAttackQualPlot(resultSMT):
 	def __init__(self, accuracy,name = 'maxAdversAttackQualPlot'):
@@ -29,13 +30,18 @@ class maxAdversAttackQualPlot(resultSMT):
 				largestLayer = max([int(str(x)[2]) for x in allX])
 				lastLayerVars = [x for x in self.smtSolutions[0]['model'] if str(x)[2] == str(largestLayer)]
 				solutionPoints = solutionsToPoints(self.smtSolutions,['x_0','x'+'_'+str(largestLayer)])
-				fig, ax = plt.subplots(nrows=2, ncols=len(solutionPoints), squeeze = False)
+				# fig, ax = plt.subplots(nrows=2, ncols=len(solutionPoints), squeeze = False)
+				fig, ax = plt.subplots(nrows=1, ncols=len(solutionPoints), squeeze = False)
+				# for column in range(len(solutionPoints)):
+				# 	ax[0, column].plot(solutionPoints[column][0])
+				# 	ax[0, column].title.set_text('Input of AE:')
+				# for column in range(len(solutionPoints)):
+				# 	ax[1, column].plot(solutionPoints[column][1])
+				# 	ax[1, column].title.set_text('Output of AE:')
 				for column in range(len(solutionPoints)):
-					ax[0, column].plot(solutionPoints[column][0])
-					ax[0, column].title.set_text('Input of AE:')
-				for column in range(len(solutionPoints)):
-					ax[1, column].plot(solutionPoints[column][1])
-					ax[1, column].title.set_text('Output of AE:')
+					ax[0, column].plot(solutionPoints[column][0], color = 'blue')
+					ax[0, column].title.set_text('Input of AE: Blue, Output: red')
+					ax[0, column].plot(solutionPoints[column][1], color = 'red')
 				self.result = fig
 
 	def storeSMTResult(self, tmpFolderSmt):
@@ -44,7 +50,8 @@ class maxAdversAttackQualPlot(resultSMT):
 			cwd = os.getcwd()
 			os.chdir(tmpFolderSmt)
 			plt.figure(self.result.number)
-			plt.savefig(os.getcwd()+'\\'+str(self.name))
+			plt.savefig(os.getcwd()+'/'+str(self.name))
+			tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
 			plt.close('all')
 			os.chdir(cwd)
 

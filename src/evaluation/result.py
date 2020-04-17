@@ -15,3 +15,9 @@ class result(metaclass = abc.ABCMeta):
 	@abc.abstractmethod
 	def calcResult():
 		pass
+
+	def getCollResults(self):
+		if 'collResults' in self.__dir__():
+			return self.collResults
+		else:
+			return None

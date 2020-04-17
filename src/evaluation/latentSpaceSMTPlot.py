@@ -59,8 +59,10 @@ class latentSpaceSMTPlot(resultSMT):
 		distInTrainLatentPoints[distInTrainLatentPoints == 0] = 10
 		distInTrainLatentPointsMinRows = distInTrainLatentPoints.min(axis = 0)
 		maxMinDistInTrainLatentPoints = distInTrainLatentPointsMinRows.max()
+		if maxMinDistInTrainLatentPoints != 0:
+			distRatio = minDistToAdversLatent/maxMinDistInTrainLatentPoints
 
-		fig.suptitle(f'The minimum distance of any Datapoint to the maxAdversLatentPoint is {minDistToAdversLatent}. The minimum distance within the trainDatasetLatentPoints is {maxMinDistInTrainLatentPoints}. ')
+		fig.suptitle('The minimum distance of any Datapoint to the maxAdversLatentPoint is {}. The max-min distance within the trainDatasetLatentPoints is {}. Their ratio is {}'.format(minDistToAdversLatent, maxMinDistInTrainLatentPoints, distRatio))
 		return fig
 
 
@@ -70,6 +72,6 @@ class latentSpaceSMTPlot(resultSMT):
 			cwd = os.getcwd()
 			os.chdir(tmpFolderSmt)
 			plt.figure(self.result.number)
-			plt.savefig(os.getcwd()+'\\'+str(self.name))
+			plt.savefig(os.getcwd()+'/'+str(self.name))
 			plt.close('all')
 			os.chdir(cwd)

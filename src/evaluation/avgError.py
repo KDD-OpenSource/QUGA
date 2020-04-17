@@ -3,6 +3,7 @@ import pandas as pd
 from .resultAE import resultAE
 from ..utils import myUtils
 from itertools import product
+import os
 
 class avgError(resultAE):
 	"""This class plots the reconstructed vs the original plot"""
@@ -21,11 +22,18 @@ class avgError(resultAE):
 		if self.testDataset.tsFlg == True:
 			testDataset.timeseriesToPoints(windowLength = algorithm.architecture[0])
 			self.recon = np.array(algorithm.predict(self.testDataset.data))
-			self.avgError = pd.DataFrame([np.square(np.subtract(self.recon, self.testDataset.data)).sum(axis=1).mean()])
+			self.avgError = pd.DataFrame([np.square(np.subtract(self.recon, self.testDataset.data)).mean(axis=1).mean()])
 			testDataset.pointsToTimeseries()
 		else:
-			raise Exception('avg Error for non-TS Data has not been tested')
-			# self.recon = np.array(algorithm.predict(self.testDataset.data))
-			# self.avgErrog = np.square(np.subtract(self.recon, self.testDataset.data)).sum(axis=1).mean()
-
+			self.recon = np.array(algorithm.predict(self.testDataset.data))
+			self.avgError = pd.DataFrame([np.square(np.subtract(self.recon, self.testDataset.data)).mean(axis=1).mean()])
 		self.result = self.avgError
+
+	def storeAEResult(self, folder, trainDataset,testDataset, algorithm, testName):
+	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
+		cwd = os.getcwd()
+		os.chdir(folder)
+
+		self.result.to_csv(os.getcwd()+'/'+str(self.name) + '_'+str(self.testDataset.name)+'.csv', header = False, index = False)
+
+		os.chdir(cwd)
