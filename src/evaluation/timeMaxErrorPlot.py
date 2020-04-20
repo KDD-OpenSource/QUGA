@@ -60,13 +60,16 @@ class timeMaxErrorPlot(resultSMT):
 	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
 		cwd = os.getcwd()
 		os.chdir(tmpFolderSmt)
-		with open(os.getcwd()+'/'+str(self.maxErrorEst.name)+'_'+str(self.maxErrorEst.boundingBox)[:20] + '.txt', 'w') as file:
+		# with open(os.getcwd()+'/'+str(self.maxErrorEst.name)+'_'+str(self.maxErrorEst.boundingBox)[:20] + '.txt', 'w') as file:
+		with open(os.path.join(os.getcwd(), str(self.maxErrorEst.name)+'_'+str(self.maxErrorEst.boundingBox)[:20] + '.txt'), 'w') as file:
 			json.dump(self.maxErrorEst.result, file, indent = 0)
 		# with open(os.getcwd()+'/'+str(self.maxLInftyErrorEst.name)+'_'+str(self.maxLInftyErrorEst.boundingBox)[:20] + '.txt', 'w') as file:
 			# json.dump(self.maxLInftyErrorEst.result, file, indent = 0)
 		plt.figure(self.result.number)
-		plt.savefig(os.getcwd()+'/'+str(self.name))
-		tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
+		# plt.savefig(os.getcwd()+'/'+str(self.name))
+		# tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
+		plt.savefig(os.path.join(os.getcwd(), str(self.name)))
+		tikz.save(os.path.join(os.getcwd(), str(self.name) + '.tex'))
 		plt.close('all')
 		file = './maxAdversAttackSeverity.csv'
 		with open(file, 'w') as file:

@@ -25,8 +25,10 @@ class resultAE(result):
 
 		if isinstance(self.result, plt.Figure):
 			# self.result.suptitle(f'Alg: {algorithm.name},\n Train-Dataset: {trainDataset.name}, \n Test-Dataset: {testDataset.name}')
-			plt.savefig(os.getcwd()+'/'+str(self.name)+str('.png'))
-			tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
+			# plt.savefig(os.getcwd()+'/'+str(self.name)+str('.png'))
+			# tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
+			plt.savefig(os.path.join(os.getcwd(), str(self.name)+'.png'))
+			tikz.save(os.path.join(os.getcwd(), str(self.name) + '.tex'), encoding = 'utf-8')
 			plt.close('all')
 		elif isinstance(self.result, pd.DataFrame):
 			self.result.to_csv(os.getcwd()+'/'+str(self.name) + '.csv', header = False)
@@ -36,7 +38,8 @@ class resultAE(result):
 		if self.name  == 'pwDistance':
 			sequencePlotPw = sequencePlotInd(seed = self.seed)
 			pwDistFig = sequencePlotPw.getResult(algorithm, trainDataset, testDataset, self.result.iloc[-1:,-2:])
-			plt.savefig(os.getcwd() + '/' + str('pwDistancePlot'))
+			# plt.savefig(os.getcwd() + '/' + str('pwDistancePlot'))
+			plt.savefig(os.path.join(os.getcwd(), str('pwDistancePlot')))
 			plt.close('all')
 
 		os.chdir(cwd)

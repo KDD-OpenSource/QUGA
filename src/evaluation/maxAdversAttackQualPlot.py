@@ -50,8 +50,10 @@ class maxAdversAttackQualPlot(resultSMT):
 			cwd = os.getcwd()
 			os.chdir(tmpFolderSmt)
 			plt.figure(self.result.number)
-			plt.savefig(os.getcwd()+'/'+str(self.name))
-			tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
+			# plt.savefig(os.getcwd()+'/'+str(self.name))
+			# tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
+			plt.savefig(os.path.join(os.getcwd(), str(self.name)))
+			tikz.save(os.path.join(os.getcwd(), str(self.name) + '.tex'))
 			plt.close('all')
 			os.chdir(cwd)
 

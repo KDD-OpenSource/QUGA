@@ -37,10 +37,10 @@ def createFolderStructure(seed):
 
 	cwd = os.getcwd()
 	print(cwd)
-	folderPathDate = os.getcwd() + '/results/' + str(currentTime.strftime("%Y.%m.%d"))
+	folderPathDate = os.path.join(os.getcwd(), 'results', str(currentTime.strftime("%Y.%m.%d")))
 	createAndChangeWD(folderPathDate)	
 
-	folderPathSeed = os.getcwd() + '/' + str(seed)[:5]
+	folderPathSeed = os.path.join(os.getcwd(), str(seed)[:5])
 	createAndChangeWD(folderPathSeed)
 
 	return folderPathSeed
@@ -132,9 +132,7 @@ def addFolder(folder, fold_object):
 	# os.chdir(folder)
 	# print(folder)
 	# print(fold_object)
-	newFolderPath = folder + \
-		'/' + \
-		fold_object.name[:5] + '_' + str(fold_object.obj_id)[:5]
+	newFolderPath = os.path.join(folder, fold_object.name[:5] + '_' + str(fold_object.obj_id)[:5])
 	try:
 	   if not os.path.exists(newFolderPath):
 	       os.makedirs(newFolderPath)
@@ -165,8 +163,9 @@ def loadAE(folder):
 
 def loadAEParam(folder):
 	while 'autoencoder.pth' not in os.listdir(folder):
-		folder = folder[:folder.rfind('/')]
-	aeParameters = loadParamsFromJson(folder + '/'+'parameters_algorithm.txt')
+		# folder = folder[:folder.rfind('/')]
+		folder = os.path.dirname(folder)
+	aeParameters = loadParamsFromJson(os.path.join(folder, 'parameters_algorithm.txt'))
 	return aeParameters	
 
 # def loadAEState(folder, autoencoder):
@@ -178,8 +177,9 @@ def loadAEParam(folder):
 # 	os.chdir(cwd)
 def loadAEState(folder, autoencoder):
 	while 'autoencoder.pth' not in os.listdir(folder):
-		folder = folder[:folder.rfind('/')]
-	autoencoder.module.load_state_dict(torch.load(folder + '/autoencoder.pth'))
+		# folder = folder[:folder.rfind('/')]
+		folder = os.path.dirname(folder)
+	autoencoder.module.load_state_dict(torch.load(os.path.join(folder,'autoencoder.pth')))
 
 def loadDataset(folder, datasetType: str):
 	datasetParams = loadDatasetParams(folder, datasetType) 	
@@ -196,14 +196,16 @@ def loadDataset(folder, datasetType: str):
 def loadData(folder, datasetInstance):
 	fileName = datasetInstance.name + '.csv'
 	while fileName not in os.listdir(folder):
-		folder = folder[:folder.rfind('/')]
-	datasetInstance.data = pd.read_csv(folder +'/'+fileName, header = 0, index_col = 0)
+		# folder = folder[:folder.rfind('/')]
+		folder = os.path.dirname(folder)
+	datasetInstance.data = pd.read_csv(os.path.join(folder, fileName), header = 0, index_col = 0)
 
 def loadDatasetParams(folder, datasetType: str):
 	fileName = 'parameters_'+datasetType+'.txt'
 	while fileName not in os.listdir(folder):
-		folder = folder[:folder.rfind('/')]
-	datasetParams = loadParamsFromJson(folder + '/' + fileName)
+		# folder = folder[:folder.rfind('/')]
+		folder = os.path.dirname(folder)
+	datasetParams = loadParamsFromJson(os.path.join(folder, fileName))
 	return datasetParams
 
 
@@ -220,7 +222,8 @@ def storeAdvAttPairResult(smtResult, tmpFolderSmt):
 	# here smtResult is a figure
 	saveSmtSolutions(smtResult.smtSolutions, tmpFolderSmt)
 	plt.figure = smtResult.result
-	plt.savefig(os.getcwd()+'/'+str(smtResult.name))
+	# plt.savefig(os.getcwd()+'/'+str(smtResult.name))
+	plt.savefig(os.path.join(os.getcwd(), str(smtResult.name)))
 	plt.close('all')
 
 def storeMaxAdvAtt(smtResult, tmpFolderSmt):

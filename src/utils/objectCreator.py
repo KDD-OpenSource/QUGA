@@ -6,7 +6,7 @@ import math
 import uuid
 from itertools import product
 
-algorithmInputLayerSize = 35
+algorithmInputLayerSize = 8
 numberSineCycles = 50
 
 
@@ -47,7 +47,7 @@ def getAlgorithms(seed):
 			'activationFct': [nn.ReLU()],
 			'initialization': [nn.init.xavier_normal_],
 			'batchSize' : [30],
-			'epochs': [100]
+			'epochs': [10]
 			}
 		}
 	])
@@ -100,18 +100,18 @@ def getSmts():
 			'adversAttack': {'severity': 2},
 			'customBoundingBox' : sineclass_small
 			}, 
-			{
-			'adversAttack': {'severity': 2},
-			'customBoundingBox' : sineclass_largeBeg
-			}, 
-			{
-			'adversAttack': {'severity': 2},
-			'customBoundingBox' : sineclass_largeMid
-			}, 
-			{
-			'adversAttack': {'severity': 2},
-			'customBoundingBox' : sineclass_largeEnd
-			},
+			# {
+			# 'adversAttack': {'severity': 2},
+			# 'customBoundingBox' : sineclass_largeBeg
+			# }, 
+			# {
+			# 'adversAttack': {'severity': 2},
+			# 'customBoundingBox' : sineclass_largeMid
+			# }, 
+			# {
+			# 'adversAttack': {'severity': 2},
+			# 'customBoundingBox' : sineclass_largeEnd
+			# },
 			],
 			'numSolutions' : [5],
 			'boundaryAroundSolution': [0.1],
@@ -123,13 +123,13 @@ def getSmts():
 
 def getResults():
 	results = [
-	# origReconTsPlot(numDataPoints = 700),
+	origReconTsPlot(numDataPoints = 700),
 	# maxAdversAttack(accuracy = 0.025),
-	# maxAdversAttackQualPlot(accuracy = 0.025),
+	maxAdversAttackQualPlot(accuracy = 0.025),
 	# avgError(),
 	# maxLInftyErrorEst(times_s = [3,10]),
 	# maxErrorEst(times_s = [10,20]),
-	timeMaxErrorPlot(times_s = [60*1*i for i in range(1,181)])
+	# timeMaxErrorPlot(times_s = [60*1*i for i in range(1,181)])
 	# timeMaxErrorPlot(times_s = [i for i in range(1,5)])
 	# timeMaxErrorPlot(times_s = [1,2,3,4,5])
 	]	

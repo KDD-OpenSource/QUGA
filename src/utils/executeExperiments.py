@@ -186,7 +186,8 @@ def execFixedResultSMT(smt, resultSMT, autoencoder, tmpFolderSmt, trainDataset):
 
 
 def writeSettingsFile(settings, calcTime, folder):
-	file = folder + '/' + settings.testName + '.txt'
+	# file = folder + '/' + settings.testName + '.txt'
+	file = os.path.join(folder, settings.testName + '.txt')
 	with open(file, 'w') as file:
 		file.write('This run took {} seconds.'.format(calcTime))
 		file.write('\n')

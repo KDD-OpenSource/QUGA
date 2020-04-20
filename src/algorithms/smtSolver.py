@@ -253,7 +253,8 @@ class smtSolver():
 		smtDict['name'] = str(self.__dict__['name'])
 		smtDict['obj_id'] = str(self.__dict__['obj_id'])
 		smtDict['abstractConstr'] = str(self.__dict__['abstractConstr'])
-		with open(folder + '/'+ 'parameters_smt.txt', 'w') as jsonFile:
+		# with open(folder + '/'+ 'parameters_smt.txt', 'w') as jsonFile:
+		with open(os.path.join(folder, 'parameters_smt.txt'), 'w') as jsonFile:
 			json.dump(smtDict, jsonFile, indent = 0)
 
 

@@ -33,7 +33,6 @@ class avgError(resultAE):
 	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
 		cwd = os.getcwd()
 		os.chdir(folder)
-
-		self.result.to_csv(os.getcwd()+'/'+str(self.name) + '_'+str(self.testDataset.name)+'.csv', header = False, index = False)
-
+		# self.result.to_csv(os.getcwd()+'/'+str(self.name) + '_'+str(self.testDataset.name)+'.csv', header = False, index = False)
+		self.result.to_csv(os.path.join(os.getcwd(), str(self.name) + '_'+str(self.testDataset.name)+'.csv'), header = False, index = False)
 		os.chdir(cwd)

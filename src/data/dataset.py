@@ -63,17 +63,20 @@ class dataset():
 			self.tsFlg = True
 
 	def saveData(self, folder):
-		self.data.to_csv(folder + '/'+str(self.name) + '.csv')
+		# self.data.to_csv(folder + '/'+str(self.name) + '.csv')
+		self.data.to_csv(os.path.join(folder, str(self.name) + '.csv'))
 		dataDict = copy.deepcopy(self.__dict__)
 		dataDict.pop('data')
 		for key in list(dataDict.keys()):
 			dataDict[key] = str(dataDict[key])
 		# algorithmDictAdj['test_name'] = test_name
 		if self.purposeFlg == 'train':
-			with open(folder + '/' + 'parameters_trainDataset.txt', 'w') as jsonFile:
+			# with open(folder + '/' + 'parameters_trainDataset.txt', 'w') as jsonFile:
+			with open(os.path.join(folder, 'parameters_trainDataset.txt'), 'w') as jsonFile:
 				json.dump(dataDict, jsonFile, indent = 0)
 		elif self.purposeFlg == 'test':		
-			with open(folder + '/' + 'parameters_testDataset.txt', 'w') as jsonFile:
+			# with open(folder + '/' + 'parameters_testDataset.txt', 'w') as jsonFile:
+			with open(os.path.join(folder, 'parameters_testDataset.txt'), 'w') as jsonFile:
 				json.dump(dataDict, jsonFile, indent = 0)
 		else:
 			# raise Exception(f'The purposeFlg of the dataset {self.data.name} is neither train nor test')

@@ -98,12 +98,13 @@ class maxErrorEst(resultSMT):
 	# 	cwd = os.getcwd()
 	# 	os.chdir(folder)
 	# 	with open(os.getcwd()+'/'+str(self.name)+'_'+str(self.boundingBox)[:20] + '.txt', 'w') as file:
+	# 	with open(os.path.join(os.getcwd(), str(self.name)+'_'+str(self.boundingBox)[:20] + '.txt'), 'w') as file:
 	# 		json.dump(self.result, file, indent = 0)
 	# 	os.chdir(cwd)
 	def storeSMTResult(self, tmpFolderSmt):
 	# we create a folder with the current timestamp. In this folder all the plots should be stored as files
 		cwd = os.getcwd()
 		os.chdir(tmpFolderSmt)
-		with open(os.getcwd()+'/'+str(self.name)+'_'+str(self.boundingBox)[:20] + '.txt', 'w') as file:
+		with open(os.path.join(os.getcwd(), str(self.name)+'_'+str(self.boundingBox)[:20] + '.txt'), 'w') as file:
 			json.dump(self.result, file, indent = 0)
 		os.chdir(cwd)
