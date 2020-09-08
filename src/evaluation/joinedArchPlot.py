@@ -4,72 +4,109 @@ import numpy as np
 from .resultJoined import resultJoined
 from itertools import product
 
+
 class joinedAEParamPlot(resultJoined):
-	"""This class joins all the archplot from already existing ones"""
-	def __init__(self, name = 'joinedAEParamPlot'):
-		super(joinedAEParamPlot, self).__init__(name)
-		self.name = name
-		self.allCollResults = pd.DataFrame(columns = ['algorithmId', 'trainDatasetId','algorithmArchitecture'])
-		self.figures = None
+    """This class joins all the archplot from already existing ones"""
 
-	def calcResult(self, resultsAE, resultsSMT):
-		for result in resultsAE + resultsSMT:
-			if result.name in ['maxAdversAttackAEParamPlot', 'avgErrorAEParamPlot', 'maxErrorEstAEParamPlot', 'maxAdversAttackErrorEstAEParamPlot', 'theoMaxErrorEstAEParamPlot']:
-				tmpResult = result.getCollResults()
-				if result.name == 'maxErrorEstArchPlot':
-					sampleSize = str(tmpResult['sampleSize'].iloc[0])
-					boundingBox = str(tmpResult['boundingBox'].iloc[0][0])
-					maxErrorEstCol = str('maxErrorEstArchPlot'+'_'+boundingBox +'_'+ sampleSize)
-					tmpResult[maxErrorEstCol] = tmpResult['maxErrorEst']
-				tmpResult['algorithmId'] = tmpResult['algorithm'].apply(lambda x: str(x.obj_id))
-				tmpResult['algorithmArchitecture'] = tmpResult['algorithm'].apply(lambda x: str(x.architecture))
-				tmpResult['trainDatasetId'] = tmpResult['trainDataset'].apply(lambda x: str(x.obj_id))
-				self.allCollResults = pd.merge(self.allCollResults,tmpResult, on = ['algorithmId','trainDatasetId', 'algorithmArchitecture'], how= 'outer')
-		print(self.allCollResults)
+    def __init__(self, name='joinedAEParamPlot'):
+        super(joinedAEParamPlot, self).__init__(name)
+        self.name = name
+        self.allCollResults = pd.DataFrame(
+            columns=[
+                'algorithmId',
+                'trainDatasetId',
+                'algorithmArchitecture'])
+        self.figures = None
 
-		self.figures = []
-		for trainDatasetId in self.allCollResults['trainDatasetId'].unique():
-			tmpDataFrame = self.allCollResults[self.allCollResults['trainDatasetId'] == trainDatasetId]
-			self.figures.append({'trainDatasetId': trainDatasetId, 'figure': self.calcJoinedResult(trainDatasetId, tmpDataFrame)})
+    def calcResult(self, resultsAE, resultsSMT):
+        for result in resultsAE + resultsSMT:
+            if result.name in [
+                'maxAdversAttackAEParamPlot',
+                'avgErrorAEParamPlot',
+                'maxErrorEstAEParamPlot',
+                'maxAdversAttackErrorEstAEParamPlot',
+                    'theoMaxErrorEstAEParamPlot']:
+                tmpResult = result.getCollResults()
+                if result.name == 'maxErrorEstArchPlot':
+                    sampleSize = str(tmpResult['sampleSize'].iloc[0])
+                    boundingBox = str(tmpResult['boundingBox'].iloc[0][0])
+                    maxErrorEstCol = str(
+                        'maxErrorEstArchPlot' + '_' + boundingBox + '_' + sampleSize)
+                    tmpResult[maxErrorEstCol] = tmpResult['maxErrorEst']
+                tmpResult['algorithmId'] = tmpResult['algorithm'].apply(
+                    lambda x: str(x.obj_id))
+                tmpResult['algorithmArchitecture'] = tmpResult['algorithm'].apply(
+                    lambda x: str(x.architecture))
+                tmpResult['trainDatasetId'] = tmpResult['trainDataset'].apply(
+                    lambda x: str(x.obj_id))
+                self.allCollResults = pd.merge(
+                    self.allCollResults, tmpResult, on=[
+                        'algorithmId', 'trainDatasetId', 'algorithmArchitecture'], how='outer')
+        print(self.allCollResults)
 
-	def calcJoinedResult(self, trainDataset, tmpDataFrame):
-		# if 'algorithm' in tmpDataFrame.columns:
-		# 	AEArchitectures = sorted([x.architecture for x in tmpDataFrame['algorithm']])
-		# else:
-		# 	AEArchitectures = sorted([x.architecture for x in tmpDataFrame['algorithm_x']])
-		AEArchitectures = sorted([x for x in tmpDataFrame['algorithmArchitecture']])
-		y_pos = np.arange(len(AEArchitectures))
-		fig = plt.figure(figsize = (20,10))
-		plt.xticks(y_pos, AEArchitectures, rotation = 90)
-		currentMax = 0
-		for metric in tmpDataFrame.columns:
-			# for substring in ['maxAdversAttack', 'avgError', 'maxErrorEstArch', 'maxAdversAttackErrorEst', 'theoMaxErrorEst']:
-			for substring in ['avgError', 'maxErrorEstArch', 'maxAdversAttackErrorEst', 'theoMaxErrorEst']:
-				if substring in metric:
-					print('substring: {}, metric: {}'.format(substring, metric))
-			# if metric.strip('_x').strip('_y') in ['maxAdversAttack', 'avgError', 'maxErrorEst']:
+        self.figures = []
+        for trainDatasetId in self.allCollResults['trainDatasetId'].unique():
+            tmpDataFrame = self.allCollResults[self.allCollResults['trainDatasetId']
+                                               == trainDatasetId]
+            self.figures.append({'trainDatasetId': trainDatasetId, 'figure': self.calcJoinedResult(
+                trainDatasetId, tmpDataFrame)})
 
-					metricValues = tmpDataFrame[metric].values.tolist()
-					print('metricValue: {}, currentMax: {}'.format(metricValues, currentMax))
+    def calcJoinedResult(self, trainDataset, tmpDataFrame):
+        # if 'algorithm' in tmpDataFrame.columns:
+        # 	AEArchitectures = sorted([x.architecture for x in tmpDataFrame['algorithm']])
+        # else:
+        # 	AEArchitectures = sorted([x.architecture for x in tmpDataFrame['algorithm_x']])
+        AEArchitectures = sorted(
+            [x for x in tmpDataFrame['algorithmArchitecture']])
+        y_pos = np.arange(len(AEArchitectures))
+        fig = plt.figure(figsize=(20, 10))
+        plt.xticks(y_pos, AEArchitectures, rotation=90)
+        currentMax = 0
+        for metric in tmpDataFrame.columns:
+            # for substring in ['maxAdversAttack', 'avgError',
+            # 'maxErrorEstArch', 'maxAdversAttackErrorEst', 'theoMaxErrorEst']:
+            for substring in [
+                'avgError',
+                'maxErrorEstArch',
+                'maxAdversAttackErrorEst',
+                    'theoMaxErrorEst']:
+                if substring in metric:
+                    print(
+                        'substring: {}, metric: {}'.format(
+                            substring, metric))
+            # if metric.strip('_x').strip('_y') in ['maxAdversAttack',
+            # 'avgError', 'maxErrorEst']:
 
-					plt.plot(y_pos, metricValues, marker = '.', label = metric)
-					if max(metricValues) > currentMax:
-						axes = plt.gca()
-						currentMax = max(metricValues)
-						axes.set_ylim([0,1.1*currentMax])
+                    metricValues = tmpDataFrame[metric].values.tolist()
+                    print(
+                        'metricValue: {}, currentMax: {}'.format(
+                            metricValues, currentMax))
 
-		plt.legend(loc='best')
+                    plt.plot(y_pos, metricValues, marker='.', label=metric)
+                    if max(metricValues) > currentMax:
+                        axes = plt.gca()
+                        currentMax = max(metricValues)
+                        axes.set_ylim([0, 1.1 * currentMax])
 
-		return fig
-		# we should have a new plot for every combination of trainDataset and Autoencoder
-		# also for different testSets, we should have new plots
+        plt.legend(loc='best')
 
-	def storeJoinedResults(self, runFolder):
-		print(self.figures)
-		for figureDict in self.figures:
-			self.storeJoinedResult(runFolder, figureDict)
+        return fig
+        # we should have a new plot for every combination of trainDataset and Autoencoder
+        # also for different testSets, we should have new plots
 
-	def storeJoinedResult(self, folder, figureDict):
-		plt.figure(figureDict['figure'].number)
-		trainDatasetId = figureDict['trainDatasetId']
-		plt.savefig(folder + '//'+'joinedResult'+'_'+str(trainDatasetId)[:5]+'.png')
+    def storeJoinedResults(self, runFolder):
+        print(self.figures)
+        for figureDict in self.figures:
+            self.storeJoinedResult(runFolder, figureDict)
+
+    def storeJoinedResult(self, folder, figureDict):
+        plt.figure(figureDict['figure'].number)
+        trainDatasetId = figureDict['trainDatasetId']
+        plt.savefig(
+            folder +
+            '//' +
+            'joinedResult' +
+            '_' +
+            str(trainDatasetId)[
+                :5] +
+            '.png')

@@ -10,5 +10,14 @@ from .ecg5000 import ecg5000
 from .eegWaves import eegWaves
 
 
-
-__all__ = ['sineNoise', 'twoSineNoise', 'twoSineFrequenciesNoise', 'twoSineAmplitudesNoise','circleNoise', 'smallKitchenAppliances', 'eegWaves', 'ecg5000', 'twoSineFrequenciesNoiseTest', 'sampleBoxTest']
+__all__ = [
+    'sineNoise',
+    'twoSineNoise',
+    'twoSineFrequenciesNoise',
+    'twoSineAmplitudesNoise',
+    'circleNoise',
+    'smallKitchenAppliances',
+    'eegWaves',
+    'ecg5000',
+    'twoSineFrequenciesNoiseTest',
+    'sampleBoxTest']
