@@ -291,13 +291,3 @@ def createAndChangeWD(folder):
     if not os.path.exists(folder):
         os.mkdir(folder)
     os.chdir(folder)
-
-
-def test_AE_SMTSolution(autoencoder, resultSMT):
-    smtSolutions = resultSMT.smtSolutions
-    points = solutionsToPoints(smtSolutions, ['x_0', 'x_1', 'x_2'])
-    print(points)
-    pointsDF = pd.DataFrame(points[0][0]).transpose()
-    print(pointsDF)
-    autoencoderSolution = autoencoder.getAEResults(pointsDF)
-    print(autoencoderSolution)

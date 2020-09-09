@@ -9,13 +9,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import torch
-from .myUtils import splitDatasets, createFolderStructure, addFolder, loadParamsFromJson, loadAE, storeSmtResult, loadDataset, test_AE_SMTSolution
+from .myUtils import splitDatasets, createFolderStructure, addFolder, loadParamsFromJson, loadAE, storeSmtResult, loadDataset
 from ..data.dataset import dataset
 from ..algorithms.autoencoder import autoencoder
 from ..algorithms.smtSolver import smtSolver
 from ..evaluation.resultAE import resultAE
 from ..evaluation.resultSMT import resultSMT
-from ..evaluation.resultJoined import resultJoined
 from itertools import product
 import multiprocessing as mp
 from z3 import *
@@ -25,55 +24,22 @@ def executeExperiments(
         settings,
         objects,
 ):
-    algorithms, trainDatasets, testDatasets, validationDatasets, smts, resultsAE, resultsSMT, resultsJoined = decomposeObjects(
-        objects)
-
+    algorithms, trainDatasets, testDatasets, validationDatasets, smts, resultsAE, resultsSMT = decomposeObjects(objects)
     runFolder = createFolderStructure(settings.seed)
-
-    # TMP
-    trainDatasetAEFolders = [
-        '/home/bboeing/bboeing_venv/AE_SMT/results/2020.03.30/24746/autoe_37382/twoSi_7e257']
     start = time.time()
 
+    # this trains all autoencoders on all training sets and calculates
+    # their respective results on test datasets. The results are stored in
+    # runFolder
     if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'ae':
-        # this executes all the experiments and calculates/stores the (single)
-        # results
         trainDatasetAEFolders = execAEExperiments(
             algorithms, trainDatasets, testDatasets, resultsAE, runFolder)
-        # this calculates all the collected results
-        for resultAE in resultsAE:
-            if 'collResults' in resultAE.__dir__():
-                resultAE.calcCollectedAEResults()
-                resultAE.storeCollectedAEResults(runFolder)
 
+    # this runs all smts on all trained autoencoders
     if settings.experimentScope == 'ae_smt' or settings.experimentScope == 'smt':
         collectedResults = execSMTExperiments(
             trainDatasetAEFolders, smts, resultsSMT)
-        # print('CollectedResults: {}'.format(collectedResults))
-        for elem in collectedResults:
-            AEList = elem.get()
-            for smtRes in AEList[0]:
-                # to be changed as 'if smtRes.name == resultSMT.name:'
-                for resultSMT in resultsSMT:
-                    if smtRes is not None and smtRes.name == resultSMT.name and 'collResults' in resultSMT.__dir__():
-                        resultSMT.collResults = resultSMT.collResults.append(
-                            smtRes.collResults)
 
-                # if smtRes is not None and (smtRes.name == 'maxAdversAttackArchPlot' or smtRes.name == 'maxAdversGrowingBoxPlot' or smtRes.name == 'maxAdversAttackErrorEstArchPlot' or smtRes.name == 'theoMaxErrorEstArchPlot'):
-                # 	for resultSMT in resultsSMT:
-                # 		if 'collResults' in resultSMT.__dir__():
-                # 			resultSMT.collResults = resultSMT.collResults.append(smtRes.collResults)
-
-        # this calculates all the collected results
-        for resultSMT in resultsSMT:
-            if 'collResults' in resultSMT.__dir__():
-                # print(resultSMT.collResults)
-                resultSMT.calcCollectedSMTResults()
-                resultSMT.storeCollectedSMTResults(runFolder)
-
-    for resultJoined in resultsJoined:
-        resultJoined.calcResult(resultsAE, resultsSMT)
-        resultJoined.storeJoinedResults(runFolder)
 
     end = time.time()
     calcTime = end - start
@@ -164,8 +130,8 @@ def execFixedResultAE(
 
 def decomposeObjects(objects):
     trainDatasets, testDatasets, validationDatasets = splitDatasets(objects[1])
-    resultsAE, resultsSMT, resultsJoined = splitResults(objects[3])
-    return objects[0], trainDatasets, testDatasets, validationDatasets, objects[2], resultsAE, resultsSMT, resultsJoined
+    resultsAE, resultsSMT = splitResults(objects[3])
+    return objects[0], trainDatasets, testDatasets, validationDatasets, objects[2], resultsAE, resultsSMT
 
 
 def addAEFolderstructure(runFolder, algorithm, trainDataset):
@@ -182,24 +148,22 @@ def storeTrainedAE(algorithm, trainDataset, tmpFolderTrain):
 def splitResults(results):
     resultsAE = []
     resultsSmt = []
-    resultsJoined = []
     for elem in results:
         if isinstance(elem, resultAE):
             resultsAE.append(elem)
         elif isinstance(elem, resultSMT):
             resultsSmt.append(elem)
-        elif isinstance(elem, resultJoined):
-            resultsJoined.append(elem)
         else:
             raise Exception(
                 'Any result should belong a result type indicated by a given flg')
-    return resultsAE, resultsSmt, resultsJoined
+    return resultsAE, resultsSmt
 
 
 def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
-    # pool = mp.Pool(mp.cpu_count())
-    # currently using 20 cpus, because I share with Erik
-    pool = mp.Pool(20)
+    # for local machines '1' is the better option due to extensive use of
+    # memory. For servers 'mp.cpu_count()' with speed up via parallelization.
+    #pool = mp.Pool(mp.cpu_count())
+    pool = mp.Pool(1)
     print(mp.cpu_count())
     arg_list = []
     for folder, smt in product(trainDatasetAEFolders, smts):
@@ -213,10 +177,6 @@ def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
     pool.close()
     pool.join()
     return collectedResults
-    # pool.close()
-
-# def execFixedFolder(folder, smts, resultsSMT):
-
 
 def execFixedFolder(folder, smt, resultSMT):
     print('process id:', os.getpid())
@@ -224,8 +184,6 @@ def execFixedFolder(folder, smt, resultSMT):
     autoencoder = loadAE(folder)
     trainDataset = loadDataset(folder, 'trainDataset')
     results = []
-    # for smt in smts:
-    # results.append(execFixedSMT(folder, smt, resultsSMT, autoencoder, trainDataset))
     results.append(
         execFixedSMT(
             folder,
@@ -262,8 +220,6 @@ def execFixedResultSMT(
         algorithm=autoencoder,
         trainDataset=trainDataset,
         smt=smt)
-    # if resultSMT.name == 'maxAdversAttack':
-    # 	test_AE_SMTSolution(autoencoder, resultSMT)
     print(resultSMT.result)
     resultSMT.storeSMTResult(tmpFolderSmt)
     print('Autoencoder: {}'.format(autoencoder.architecture))
@@ -276,7 +232,6 @@ def execFixedResultSMT(
 
 
 def writeSettingsFile(settings, calcTime, folder):
-    # file = folder + '/' + settings.testName + '.txt'
     file = os.path.join(folder, settings.testName + '.txt')
     with open(file, 'w') as file:
         file.write('This run took {} seconds.'.format(calcTime))

@@ -16,10 +16,9 @@ def main():
 
 def getExperimentSettings():
     settings = ExperimentSettings()
-    settings.testName = 'TestrunOnLocalSystem'
+    settings.testName = 'MyTestName'
     settings.description = ''
     settings.experimentScope = 'ae_smt'
-    # settings.experimentScope = 'smt'
     settings.resultFolders = None
     return settings
 
