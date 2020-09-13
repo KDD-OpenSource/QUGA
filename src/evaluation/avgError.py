@@ -1,3 +1,7 @@
+"""
+this class calculates the average mean L2 error between input and output of
+autoencoders over all elements of the given testDataset
+"""
 import numpy as np
 import pandas as pd
 from .resultAE import resultAE
@@ -7,8 +11,6 @@ import os
 
 
 class avgError(resultAE):
-    """This class plots the reconstructed vs the original plot"""
-
     def __init__(self, name='avgError'):
         super(avgError, self).__init__(name)
         self.algorithm = None
@@ -41,11 +43,8 @@ class avgError(resultAE):
             testDataset,
             algorithm,
             testName):
-        # we create a folder with the current timestamp. In this folder all the
-        # plots should be stored as files
         cwd = os.getcwd()
         os.chdir(folder)
-        # self.result.to_csv(os.getcwd()+'/'+str(self.name) + '_'+str(self.testDataset.name)+'.csv', header = False, index = False)
         self.result.to_csv(os.path.join(os.getcwd(), str(
             self.name) + '_' + str(self.testDataset.name) + '.csv'), header=False, index=False)
         os.chdir(cwd)

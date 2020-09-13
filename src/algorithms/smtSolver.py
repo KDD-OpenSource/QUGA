@@ -1,441 +1,364 @@
 from z3 import *
-# import z3solver
 import numpy as np
 import uuid
-from itertools import product
 import time
 import json
 import os
+import shutil
 
 
 class smtSolver():
-    def __init__(
-            self,
-            name,
-            abstractConstr=None,
-            numSolutions=1,
-            boundaryAroundSolution=0.3):
+    def __init__(self, name, abstractConstr=None, numSolutions=1,
+                    boundaryAroundSolution=0.3):
+        '''
+        Forms an interface with the planet library to solve SMT formulas.
+
+        name            --  the objects name
+        id              --  the objects id
+        abstractConstr  --  a list of abstract constraints such as boundingBox,
+                            customBoundingBox, etc...
+        variables       --  variables of the smt model. They correspond to nodes
+                            in the neural net
+        maxAdvesAttack  --  stores a list of algorithm, trainset and their
+                            respective maxAdversAttacks
+        folder          --  indicates the folder in which the smtResults are
+                            saved
+        '''
         self.name = name
         self.obj_id = uuid.uuid4()
         self.abstractConstr = abstractConstr
         self.variables = []
-        self.aeConstr = []
-        self.resultConstr = []
-        self.customConstr = []
-        self.numConstr = None
-        self.netWeightMatrices = None
-        self.netBiases = None
-        self.satisfiable = None
-        # self.solver = Solver()
-        self.solver = None
-        self.numSolutions = numSolutions
-        self.boundaryAroundSolution = boundaryAroundSolution
         self.maxAdversAttack = []
-        self.maxSumAdversAttack = []
+        self.folder = None
+        self.Constr = []
+        self.adversConstr = []
 
-    def addAEConstr(self, autoencoder):
-        self.constructAEMatrixBias(autoencoder)
-        for list, res in zip([self.variables, self.aeConstr],
-                             self.constructNetConstr('x')):
-            list.extend(res)
-        self.solver.add(self.aeConstr)
-        self.numConstr = len(self.solver.assertions())
+    def readAE(self, autoencoder):
+        """ Read the autoencoders parameters and translates them to variables
+        and constraints.
+        """
+        weightMatrix, bias = self.constructAEMatrixBias(autoencoder)
+        self.variables.extend(self.constrNetVars('x', weightMatrix))
+        self.addNetConstr(self.variables, weightMatrix, bias)
 
-    def addCustomConstr(self, exceptions=[]):
-        for elem in self.abstractConstr:
-            if elem not in exceptions:
-                self.customConstr.extend(self.customConstrConstructer(elem))
-        self.solver.add(self.customConstr)
-        self.numConstr = len(self.solver.assertions())
-
-    def customConstrConstructer(self, abstractConstr):
-        customConstrs = []
-        if abstractConstr == 'adversAttack':
-            customConstrs.extend(
-                self.getAdversAttConstr(
-                    self.abstractConstr['adversAttack']['severity']))
-
-        if abstractConstr == 'adversAttackPair':
-            for list, res in zip([self.variables, customConstrs],
-                                 self.constructNetConstr('y')):
-                list.extend(res)
-            firstSmtVars = [
-                var for var in self.variables if str(
-                    var[0])[2] == '0']
-            customConstrs.extend([Or(And(firstSmtVars[0][i] -
-                                         firstSmtVars[1][i] < self.abstractConstr['adversAttackPair']['proximity'], firstSmtVars[0][i] -
-                                         firstSmtVars[1][i] >= 0), And(firstSmtVars[1][i] -
-                                                                       firstSmtVars[0][i] < self.abstractConstr['adversAttackPair']['proximity'], firstSmtVars[1][i] -
-                                                                       firstSmtVars[0][i] >= 0)) for i in range(len(firstSmtVars[0]))])
-
-            allX = [x for x in self.variables if str(x[0])[0] == 'x']
-            largestLayer = max([int(str(x[0])[2]) for x in allX])
-            lastLayerVars = [
-                x for x in self.variables if str(
-                    x[0])[2] == str(largestLayer)]
-            orConstrs = []
-            for i in range(len(lastLayerVars[0])):
-                orConstrs.extend(
-                    [
-                        lastLayerVars[0][i] -
-                        lastLayerVars[1][i] > self.abstractConstr['adversAttackPair']['severity'],
-                        lastLayerVars[1][i] -
-                        lastLayerVars[0][i] > self.abstractConstr['adversAttackPair']['severity']])
-            customConstrs.append(Or(orConstrs))
-        if abstractConstr == 'boundingBox':
-            customConstrs.extend([And(self.variables[0][i] < self.abstractConstr['boundingBox'],
-                                      self.variables[0][i] > -self.abstractConstr['boundingBox']) for i in range(len(self.variables[0]))])
-
-            # 'customBoundingBox' : [[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2],[0,0.2]]
-        if abstractConstr == 'customBoundingBox':
-            tmpSATProblem = Solver()
-            tmpSATProblem.add([And(self.variables[0][i] < self.abstractConstr['customBoundingBox'][i][1], self.variables[0][
-                              i] > self.abstractConstr['customBoundingBox'][i][0]) for i in range(len(self.variables[0]))])
-            if tmpSATProblem.check() == sat:
-                customConstrs.extend([And(self.variables[0][i] < self.abstractConstr['customBoundingBox'][i][1],
-                                          self.variables[0][i] > self.abstractConstr['customBoundingBox'][i][0]) for i in range(len(self.variables[0]))])
-            else:
-                raise Exception(
-                    'Your Custom bounding box given by {} does not allow for a solution. Adjust it!'.format(
-                        tmpSATProblem.assertions()))
-        return customConstrs
-
-    def constructNetConstr(self, varName):
+    def constrNetVars(self, varName, weightMatrix):
+        """ Return variables used by smt Model and write them to smtSolver
+        object
+        """
         smtVars = []
-        matrixLength = len(self.netWeightMatrices)
+        matrixLength = len(weightMatrix)
         for layer in range(matrixLength):
-            smtVars.append([Real(varName + '_' + str(layer) + '_' + str(i))
-                            for i in range(self.netWeightMatrices[layer].shape[0])])
-        Constr = []
-        # for layer, destNeuron in product(range(1,matrixLength-1),
-        # range(len(smtVars[layer]))):
+            smtVars.append(
+                self.constrLayerVars(
+                    varName,
+                    layer,
+                    weightMatrix
+                    ))
+        return smtVars
+
+    def constrLayerVars(self, varName, layer, weightMatrix):
+        """ Return the smt variables for one layer of the autoencoder
+        """
+        return  [
+            Real(varName + '_' + str(layer) + '_' + str(i))
+            for i in range(weightMatrix[layer].shape[0])
+            ]
+
+    def addNetConstr(self, smtVars, weightMatrix, bias):
+        """ Write the net constraints of the autoencoder to the planet file
+        ('ae_example.rlv')
+        """
+        matrixLength = len(weightMatrix)
         for layer in range(1, matrixLength - 1):
             for destNeuron in range(len(smtVars[layer])):
-                weightedSum = Sum([self.netWeightMatrices[layer][destNeuron][sourceNeuron] *
-                                   smtVars[layer - 1][sourceNeuron] for sourceNeuron in range(len(smtVars[layer - 1]))])
-                Constr.append(smtVars[layer][destNeuron] == If(weightedSum +
-                                                               self.netBiases[layer -
-                                                                              1][destNeuron] < 0, 0, weightedSum +
-                                                               self.netBiases[layer -
-                                                                              1][destNeuron]))
+                self.addFixedConstr(
+                    'ReLU',
+                    weightMatrix,
+                    bias,
+                    destNeuron,
+                    smtVars,
+                    layer
+                    )
         for destNeuron in range(len(smtVars[matrixLength - 1])):
-            weightedSum = Sum([self.netWeightMatrices[matrixLength -
-                                                      1][destNeuron][sourceNeuron] *
-                               smtVars[matrixLength -
-                                       1 -
-                                       1][sourceNeuron] for sourceNeuron in range(len(smtVars[matrixLength -
-                                                                                              1 -
-                                                                                              1]))])
-            Constr.append(smtVars[matrixLength -
-                                  1][destNeuron] == weightedSum +
-                          self.netBiases[matrixLength -
-                                         2][destNeuron])
-        return smtVars, Constr
+            self.addFixedConstr(
+                'Linear',
+                weightMatrix,
+                bias,
+                destNeuron,
+                smtVars
+                )
+
+    def addFixedConstr(self, varType, weightMatrix, bias,
+                            destNeuron, smtVars, layer = -1):
+        """ Writes one particular constraint to the file 'openFile'
+        """
+        if layer == -1:
+            layer = len(weightMatrix)-1
+
+        weightedSum = Sum([weightMatrix[layer][destNeuron][sourceNeuron] *
+           smtVars[layer - 1][sourceNeuron] for sourceNeuron in range(len(smtVars[layer - 1]))])
+        if varType == 'ReLU':
+            self.Constr.append(smtVars[layer][destNeuron] == If(weightedSum +
+                bias[layer - 1][destNeuron] < 0, 0, weightedSum +
+                bias[layer - 1][destNeuron]))
+        if varType == 'Linear':
+            self.Constr.append(smtVars[layer][destNeuron] == weightedSum
+                    + bias[layer-1][destNeuron])
 
     def constructAEMatrixBias(self, autoencoder):
-        self.netWeightMatrices = []
-        self.netBiases = []
+        """ Return the autoencoders weight matrix and biases
+        """
+        netWeightMatrices = []
+        netBiases = []
         localCount = 1
         for param in autoencoder.module.parameters():
             # the first layer of M is never really used. We just add it to have
             # the variables for the input layer
             if localCount == 1:
-                self.netWeightMatrices.append(np.random.normal(
-                    size=(param.size()[1], param.size()[1])))
+                netWeightMatrices.append(
+                    np.random.normal(
+                        size=(
+                            param.size()[1],
+                            param.size()[1]
+                            )
+                        )
+                    )
                 localCount = 2
             if len(param.size()) == 2:
-                self.netWeightMatrices.append(param.detach().numpy())
+                netWeightMatrices.append(param.detach().numpy())
             else:
-                self.netBiases.append(param.detach().numpy())
+                netBiases.append(param.detach().numpy())
+        return netWeightMatrices, netBiases
 
-    def modelToPoint(self, variable):
-        if self.satisfiable == sat:
-            model = self.solver.model()
-            sortedModel = sorted([(var, model[var])
-                                  for var in model], key=lambda x: str(x[0]))
-            point = []
-            for elem in sortedModel:
-                if variable in str(elem[0]):
-                    numerator = elem[1].numerator_as_long()
-                    denominator = elem[1].denominator_as_long()
-                    decimal = float(numerator / denominator)
-                    point.append(decimal)
-            return point
+    def readFolder(self, smtFolder):
+        """ Save the folder in the smtModel
+        """
+        self.folder = smtFolder
 
-        elif self.satisfiable == unsat:
-            raise Exception(
-                'Model is not satisfiable, hence we cannot convert the model to a point')
-        elif self.satisfiable is None:
-            raise Exception(
-                'You must first check the smt-model before you can convert the solution into a point')
+    def addCustomConstr(self, exceptions=[]):
+        """ write custom constraints into the planet file
+        """
+        for elem in self.abstractConstr:
+            if elem not in exceptions:
+                self.customConstrConstructer(elem)
+
+    def customConstrConstructer(self, abstractConstr):
+        """ Call the respective function for the respective abstract Constraint
+        to write to planet file
+        """
+        if abstractConstr == 'adversAttack':
+            self.setAdversAttConstr(
+                self.abstractConstr['adversAttack']['severity']
+                )
+        if abstractConstr == 'boundingBox':
+            self.addBoundingBoxConstr(
+                self.abstractConstr['boundingBox']
+                )
+        if abstractConstr == 'customBoundingBox':
+            self.addCustomBoundingBoxConstr(
+                self.abstractConstr['customBoundingBox']
+                )
+
+    def getSatisfiability(self, z3Output):
+        """ Return sat or unsat from planetOutput
+        """
+        if z3Output == sat:
+            return 'SAT'
+        elif z3Output == unsat:
+            return 'UNSAT'
         else:
-            raise Exception(
-                'the variable \'satisfiable\' of the smt model does not have a valid value.')
+            raise Exception('z3Output is neither sat nor unsat.')
 
-    def calculateSolutions(self):
-        solutions = []
-        count = 0
-        start = time.time()
-        self.satisfiable = self.solver.check()
-        end = time.time()
-        calcDuration = end - start
-        while self.satisfiable == sat and count < self.numSolutions:
-            solutions.append({'model': self.solver.model(),
-                              'calcDuration': calcDuration})
-            count = count + 1
-            self.addSolutionConstr()
-            start = time.time()
-            if self.solver.check() == unsat:
-                self.satisfiable = unsat
-            end = time.time()
-            calcDuration = end - start
-        return solutions
-
-    def addSolutionConstr(self):
-        point = self.modelToPoint('x_0')
-        # point is a vector of floats
-        newConstr = [Or(self.variables[0][i] > point[i] +
-                        self.boundaryAroundSolution, self.variables[0][i] < point[i] -
-                        self.boundaryAroundSolution) for i in range(len(self.variables[0]))]
-        self.resultConstr.extend(newConstr)
-        self.solver.add(newConstr)
-        print('New solution')
-
-    def addAbstractConstraint(constraint):
-        pass
-
-    def getMaxAdversAttack(
-            self,
-            startValue,
-            accuracy,
-            algorithm,
-            trainDataset):
+    def getMaxAdversAttack(self, startValue, accuracy, algorithm, trainDataset):
+        """ Return the maximum adversarial attack (L_Infty Norm) for the given
+        accuracy, algorithm and trainDataset
+        """
         for maxAdversAttack in self.maxAdversAttack:
             if [algorithm, trainDataset] == maxAdversAttack['algTrainPair']:
                 return maxAdversAttack
-        self.calcMaxAdversAttack(startValue, accuracy, algorithm, trainDataset)
+        self.addMaxAdversAttack(startValue, accuracy, algorithm, trainDataset)
         maxAdversAttackFiltered = [
-            x for x in self.maxAdversAttack if x['algTrainPair'] == [
-                algorithm, trainDataset]]
+            x for x in self.maxAdversAttack 
+            if x['algTrainPair'] == [algorithm, trainDataset]
+            ]
         return maxAdversAttackFiltered[0]
 
-    def calcMaxAdversAttack(
-            self,
+    def addMaxAdversAttack(self, startValue, accuracy, algorithm,
+                            trainDataset):
+        """ saves the maximum adversarial attack of a given algorithm and
+        trainDataset to the smtSolver object. This prevents it from calculating
+        it multiple times.
+        """
+        startFull = time.time()
+        severity, currentBestSmtSolution = self.calcMaxAdversAttack(
             startValue,
-            accuracy,
-            algorithm,
-            trainDataset):
+            accuracy
+            )
+        endFull = time.time()
+        calcTimeFull = endFull - startFull
+        self.maxAdversAttack.append(
+                {
+                    'severity': severity,
+                    'calcTime': calcTimeFull,
+                    'smtModel': [currentBestSmtSolution],
+                    'algTrainPair': [algorithm, trainDataset]
+                }
+            )
+
+    def calcMaxAdversAttack(self, startValue, accuracy):
+        """ Return the severity, the severity Change and the best Solution for
+        the adversarial attack.
+        """
         # Add all custom Constraints, but the adversAttack Constraints
-        # print('In the beginning of calcMaxAdversAttack the startValue is {}'.format(startValue))
-        self.addCustomConstr(exceptions=['adversAttack'])
         currentBestSmtSolution = None
+        solver = Solver()
+        solver.add(self.Constr)
+        startValue, sat = self.getStartValueMaxAdvers(solver,
+                startValue=startValue)
+        # binSearchPair consists of severity and severityChange. They are stored
+        # in such a way, so that they are mutable
+        binSearchPair = [startValue, startValue/2]
+        while(2 * binSearchPair[1] > accuracy or currentBestSmtSolution is None):
+            z3Output, calcDuration, sat = self.binSearchStep(
+                binSearchPair,
+                sat,
+                solver
+                )
+            if sat == 'SAT':
+                currentBestSmtSolution = self.updateSolution(
+                    z3Output,
+                    calcDuration
+                    )
+        return binSearchPair[0], currentBestSmtSolution
+
+    def binSearchStep(self, binSearchPair, sat, solver):
+        """ Update the binSearchPair according to sat. Then return the output
+        of planet along with new sat value and the duration of the calculation.
+        """
+        self.updateBinSearchPair(binSearchPair, sat)
+        self.setAdversAttConstr(binSearchPair[0])
         start = time.time()
-        startValue = self.getStartValueMaxAdvers(startValue=startValue)
-        severity = startValue
-        severityChange = severity / 2
-        # print('After calculating the startValue severity is {}, severityChange is {} and satisfiable is {}'.format(severity, severityChange, self.satisfiable))
-
-        while(2 * severityChange > accuracy or currentBestSmtSolution is None):
-            currentBestSmtSolution, severity, severityChange = self.updateMaxAdversAttack(
-                severity, severityChange, currentBestSmtSolution)
-        end = time.time()
-        calcTime = end - start
-        self.maxAdversAttack.append({'severity': severity, 'calcTime': calcTime, 'smtModel': [
-                                    currentBestSmtSolution], 'algTrainPair': [algorithm, trainDataset]})
-
-    def getStartValueMaxAdvers(self, startValue=20):
-        self.solver.push()
-        adversAttConstr = self.getAdversAttConstr(startValue)
-        self.solver.add(adversAttConstr)
-        self.satisfiable = self.solver.check()
-        while self.satisfiable == sat:
-            startValue = startValue * 2
-            # print('Raising the maxAdversAttack to {}'.format(startValue))
-            self.solver.pop()
-            self.solver.push()
-            adversAttConstr = self.getAdversAttConstr(startValue)
-            self.solver.add(adversAttConstr)
-            self.satisfiable = self.solver.check()
-            # print('checks model')
-        print(startValue)
-        return startValue
-
-    def updateMaxAdversAttack(
-            self,
-            severity,
-            severityChange,
-            currentBestSmtSolution):
-        # if currentBestSmtSolution == None:
-        # print('currentBestSmtSolution is None')
-        # else:
-        # print('currentBestSmtSolution is not None')
-        # print('At the beginning of updateMaxAdversAttack severity is {}, severityChange is {}.'.format(severity, severityChange))
-        if self.satisfiable == unsat:
-            severity = severity - severityChange
-        else:
-            severity = severity + severityChange
-        severityChange = severityChange / 2
-        self.solver.pop()
-        self.solver.push()
-        adversAttConstr = self.getAdversAttConstr(severity)
-        self.solver.add(adversAttConstr)
-        start = time.time()
-        self.satisfiable = self.solver.check()
+        z3Output = self.applyZ3ToAdvers(solver)
+        sat = self.getSatisfiability(z3Output[0])
         print('checks model')
-        print(severity)
+        print(binSearchPair[0])
         end = time.time()
         calcDuration = end - start
-        if self.satisfiable == sat:
-            currentBestSmtSolution = {
-                'model': self.solver.model(),
-                'calcDuration': calcDuration}
-        return currentBestSmtSolution, severity, severityChange
+        return z3Output, calcDuration, sat
 
-    def getAdversAttConstr(self, severity):
-        # TODO I think the outer 'And' is useless (though it does no harm) ->
-        # check that
-        customConstrs = []
-        orConstrs = []
+
+    def getStartValueMaxAdvers(self, solver, startValue=20):
+        """ Return the start value along with its sat value for a maximum
+        adversarial calculation.
+        Should not be used from anywhere but within the class.
+        """
+        adversAttConstr = self.setAdversAttConstr(startValue)
+        z3Output = self.applyZ3ToAdvers(solver)
+        sat = self.getSatisfiability(z3Output[0])
+        while (sat == 'SAT'):
+            startValue = startValue * 2
+            adversAttConstr = self.setAdversAttConstr(startValue)
+            z3Output = self.applyZ3ToAdvers(solver)
+            sat = self.getSatisfiability(z3Output[0])
+        print(startValue)
+        return startValue, sat
+
+    def updateSolution(self, z3Output, calcDuration):
+        """ Return the interpretation with the calculation duration of the new
+        smt Solution
+        """
+        currentBestSmtSolution = {
+            'model': self.getInterpretation(z3Output[1]),
+            'calcDuration': calcDuration
+            }
+        return currentBestSmtSolution
+
+    def updateBinSearchPair(self, binSearchPair, sat):
+        """ Updates the binSearchPair consisting of severity and severityChange
+        """
+        if sat == 'UNSAT':
+            binSearchPair[0] = binSearchPair[0] - binSearchPair[1]
+        else:
+            binSearchPair[0] = binSearchPair[0] + binSearchPair[1]
+        binSearchPair[1] = binSearchPair[1] / 2
+
+    def applyZ3ToAdvers(self, solver):
+        """ Return the output of applying the planet solver to the planetFile
+        """
+        solver.push()
+        solver.add(self.adversConstr)
+        z3Output = solver.check()
+        solver.pop()
+        if z3Output == sat:
+            z3Model = solver.model()
+            return [z3Output, z3Model]
+        else:
+            return [z3Output]
+
+    def addBoundingBoxConstr(self, boundingBox):
+        """ Writes the bounding box constraints to the planet file
+        """
+        self.Constr.extend([And(self.variables[0][i] < boundingBox,
+              self.variables[0][i] > -boundingBox) for i in range(len(self.variables[0]))])
+
+    def addCustomBoundingBoxConstr(self, customBoundingBox):
+        """ Writes the custom bounding box constraints to the planet file
+        """
+        for i in range(len(customBoundingBox)):
+            if customBoundingBox[i][1] < customBoundingBox[i][0]:
+                raise Exception('Your CustomBoundingBox is infeasible')
+        self.Constr.extend([And(self.variables[0][i] < customBoundingBox[i][1],
+                                  self.variables[0][i] > customBoundingBox[i][0]) for i in range(len(self.variables[0]))])
+
+    def setAdversAttConstr(self, severity):
+        """ Writes the adversarial attack constraints togethor with the already
+        existing constraints into a new planet file called
+        'ae_example_adversTmp'. This accounts for the iterating approach with
+        binary search to obtain the maximum adversarial attack.
+        """
+        self.adversConstr = []
+        orConstr = []
         for i in range(len(self.variables[0])):
-            orConstrs.extend([self.variables[0][i] -
-                              self.variables[len(self.variables) -
-                                             1][i] > severity, self.variables[len(self.variables) -
-                                                                              1][i] -
-                              self.variables[0][i] > severity])
-        customConstrs.append(Or(orConstrs))
-        return customConstrs
+            orConstr.extend([self.variables[0][i] -
+                self.variables[len(self.variables) - 1][i] > severity,
+                self.variables[len(self.variables) - 1][i] -
+                self.variables[0][i] > severity])
+        self.adversConstr.append(Or(orConstr))
 
+    def getInterpretation(self, z3Output):
+        """ Return the intepretation from the planet Output as a dictionary
+        containing the variables and their respective value
+        """
+        sortedModel = sorted([(var, z3Output[var])
+                              for var in z3Output], key=lambda x: str(x[0]))
+        valuePairs = {}
+        for elem in sortedModel:
+            #if variable in str(elem[0]):
+            numerator = elem[1].numerator_as_long()
+            denominator = elem[1].denominator_as_long()
+            decimal = float(numerator / denominator)
+            valuePairs[str(elem[0])] = decimal
+        return valuePairs
+
+    # Miscellaneous functions
     def clearSmt(self):
+        """ Clears the smt, so that we can reuse it on a different pair of
+        algorithm and training set.
+        """
         self.name = self.name
-        self.id = uuid.uuid4()
+        self.obj_id = uuid.uuid4()
         self.abstractConstr = self.abstractConstr
         self.variables = []
-        self.aeConstr = []
-        self.resultConstr = []
-        self.customConstr = []
-        self.numConstr = None
-        self.netWeightMatrices = None
-        self.netBiases = None
-        self.satisfiable = None
-        self.solver = Solver()
-        self.numSolutions = self.numSolutions
-        self.boundaryAroundSolution = self.boundaryAroundSolution
+        self.folder = None
+        self.Constr = []
+        self.adversConstr = []
 
     def saveSMTParameters(self, folder):
+        """ saves the smt parameters into folder
+        """
         smtDict = {}
         smtDict['name'] = str(self.__dict__['name'])
         smtDict['obj_id'] = str(self.__dict__['obj_id'])
         smtDict['abstractConstr'] = str(self.__dict__['abstractConstr'])
-        # with open(folder + '/'+ 'parameters_smt.txt', 'w') as jsonFile:
         with open(os.path.join(folder, 'parameters_smt.txt'), 'w') as jsonFile:
             json.dump(smtDict, jsonFile, indent=0)
-
-    def getSumAdversAttConstr(self, severity):
-        customConstrs = []
-        absValueSum = Sum([If(self.variables[0][i] -
-                              self.variables[len(self.variables) -
-                                             1][i] > 0, self.variables[0][i] -
-                              self.variables[len(self.variables) -
-                                             1][i], self.variables[len(self.variables) -
-                                                                   1][i] -
-                              self.variables[0][i]) for i in range(len(self.variables[0]))])
-        constr = (absValueSum > severity)
-        customConstrs.append(constr)
-        print(constr)
-        # TEST THIS ONE
-        return customConstrs
-
-    def getMaxSumAdversAttack(
-            self,
-            startValue,
-            accuracy,
-            algorithm,
-            trainDataset):
-        for maxSumAdversAttack in self.maxSumAdversAttack:
-            if [algorithm, trainDataset] == maxSumAdversAttack['algTrainPair']:
-                return maxSumAdversAttack
-        self.calcMaxSumAdversAttack(
-            startValue, accuracy, algorithm, trainDataset)
-        maxSumAdversAttackFiltered = [
-            x for x in self.maxSumAdversAttack if x['algTrainPair'] == [
-                algorithm, trainDataset]]
-        return maxSumAdversAttackFiltered[0]
-
-    def calcMaxSumAdversAttack(
-            self,
-            startValue,
-            accuracy,
-            algorithm,
-            trainDataset):
-        # Add all custom Constraints, but the adversAttack Constraints
-        print('In the beginning of calcMaxSumAdversAttack the startValue is {}'.format(
-            startValue))
-        time.sleep(2)
-        self.addCustomConstr(exceptions=['sumAdversAttack'])
-        currentBestSmtSolution = None
-        startValue = self.getStartValueMaxSumAdvers(startValue=startValue)
-        severity = startValue
-        severityChange = severity / 2
-        print(
-            'For maxSum: After calculating the startValue severity is {}, severityChange is {} and satisfiable is {}'.format(
-                severity,
-                severityChange,
-                self.satisfiable))
-        time.sleep(2)
-        while(2 * severityChange > accuracy or currentBestSmtSolution is None):
-            time.sleep(2)
-            currentBestSmtSolution, severity, severityChange = self.updateMaxSumAdversAttack(
-                severity, severityChange, currentBestSmtSolution)
-        self.maxSumAdversAttack.append({'severity': severity, 'smtModel': [
-                                       currentBestSmtSolution], 'algTrainPair': [algorithm, trainDataset]})
-
-    def getStartValueMaxSumAdvers(self, startValue=20):
-        self.solver.push()
-        sumAdversAttConstr = self.getSumAdversAttConstr(startValue)
-        self.solver.add(sumAdversAttConstr)
-        self.satisfiable = self.solver.check()
-        while self.satisfiable == sat:
-            startValue = startValue * 2
-            print('Raising the maxSumAdversAttack to {}'.format(startValue))
-            self.solver.pop()
-            self.solver.push()
-            sumAdversAttConstr = self.getSumAdversAttConstr(startValue)
-            self.solver.add(sumAdversAttConstr)
-            self.satisfiable = self.solver.check()
-            print('checks model')
-        print(startValue)
-        return startValue
-
-    def updateMaxSumAdversAttack(
-            self,
-            severity,
-            severityChange,
-            currentBestSmtSolution):
-        if currentBestSmtSolution is None:
-            print('currentBestSmtSolution is None')
-        else:
-            print('currentBestSmtSolution is not None')
-        print(
-            'At the beginning of updateMaxSumAdversAttack severity is {}, severityChange is {}.'.format(
-                severity,
-                severityChange))
-        if self.satisfiable == unsat:
-            severity = severity - severityChange
-        else:
-            severity = severity + severityChange
-        severityChange = severityChange / 2
-        self.solver.pop()
-        self.solver.push()
-        sumAdversAttConstr = self.getSumAdversAttConstr(severity)
-        self.solver.add(sumAdversAttConstr)
-        start = time.time()
-        self.satisfiable = self.solver.check()
-        print('checks model')
-        print(severity)
-        end = time.time()
-        calcDuration = end - start
-        if self.satisfiable == sat:
-            currentBestSmtSolution = {
-                'model': self.solver.model(),
-                'calcDuration': calcDuration}
-        return currentBestSmtSolution, severity, severityChange

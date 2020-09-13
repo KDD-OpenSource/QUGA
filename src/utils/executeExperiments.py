@@ -160,25 +160,34 @@ def splitResults(results):
 
 
 def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
-    # for local machines '1' is the better option due to extensive use of
-    # memory. For servers 'mp.cpu_count()' with speed up via parallelization.
     #pool = mp.Pool(mp.cpu_count())
-    pool = mp.Pool(1)
-    print(mp.cpu_count())
+    #arg_list = []
+    #for folder, smt in product(trainDatasetAEFolders, smts):
+    #    arg_list.append([folder, smt, resultsSMT])
+    #collectedResults = []
+    #print(arg_list)
+    ##import pdb; pdb.set_trace()
+    #for arguments in arg_list:
+    #    print('before')
+    #    print(arguments)
+    #    collectedResults.append(
+    #        pool.apply_async(
+    #            execFixedFolder,
+    #            args=arguments))
+    #pool.close()
+    #pool.join()
+    #import pdb; pdb.set_trace()
+
     arg_list = []
     for folder, smt in product(trainDatasetAEFolders, smts):
         arg_list.append((folder, smt, resultsSMT))
     collectedResults = []
     for arguments in arg_list:
-        collectedResults.append(
-            pool.apply_async(
-                execFixedFolder,
-                args=arguments))
-    pool.close()
-    pool.join()
+        collectedResults.append(execFixedFolder(*arguments))
+
     return collectedResults
 
-def execFixedFolder(folder, smt, resultSMT):
+def execFixedFolder(folder, smt, resultsSMT):
     print('process id:', os.getpid())
     print(folder)
     autoencoder = loadAE(folder)
@@ -188,7 +197,7 @@ def execFixedFolder(folder, smt, resultSMT):
         execFixedSMT(
             folder,
             smt,
-            resultSMT,
+            resultsSMT,
             autoencoder,
             trainDataset))
     return results

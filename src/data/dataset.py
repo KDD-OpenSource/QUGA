@@ -42,7 +42,6 @@ class dataset():
             pass
         else:
             flattenedData = np.array(self.data).flatten()
-            import pdb; pdb.set_trace()
             if (flattenedData.shape[0] - windowLength) % self.windowStep == 0:
                 windows = [flattenedData[i * self.windowStep:i * self.windowStep + windowLength]
                            for i in range(int((self.data.shape[0] - windowLength) / self.windowStep) + 1)]

@@ -1,4 +1,3 @@
-from itertools import product
 from ..utils import myUtils
 from .resultAE import resultAE
 import numpy as np
@@ -28,6 +27,9 @@ class origReconTsPlot(resultAE):
             numDataPoints = self.orig.shape[0]
         else:
             numDataPoints = self.numDataPoints
+        # tsFlg indicates whether the time series is already given in sequences
+        # for the autoencoder to use or whether we have to extract sequences
+        # from a contiguous timeseries with a sliding window
         if self.testData.tsFlg:
             testData.timeseriesToPoints(windowLength=algorithm.architecture[0])
             self.recon = np.array(algorithm.predict(self.testData.data))
@@ -37,7 +39,6 @@ class origReconTsPlot(resultAE):
         else:
             self.recon = np.array(algorithm.predict(self.testData.data))
 
-        # fig, ax = plt.subplots(1,1, sharey = True, figsize = (20,10))
         fig, ax = plt.subplots(1, 1, figsize=(20, 10))
         ax.plot(self.orig[:numDataPoints], label='Original', color='blue')
         ax.plot(self.recon[:numDataPoints],

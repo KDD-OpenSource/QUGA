@@ -1,11 +1,12 @@
 """
-This file implements the 'maxAdversAttackQualPlot' class, which is a result that plots one advers. attack in parallel coordinates. I.e. it gets the solution from an smt-solver and visualizes them next to each other.
+This file implements the 'maxAdversAttackQualPlot' class, which is a result
+that plots one advers. attack in parallel coordinates. I.e. it gets the
+solution from an smt-solver and visualizes them next to each other.
 """
 
 from .resultSMT import resultSMT
 from ..utils.myUtils import solutionsToPoints
 import matplotlib.pyplot as plt
-import time
 import os
 import tikzplotlib as tikz
 
@@ -18,10 +19,9 @@ class maxAdversAttackQualPlot(resultSMT):
         self.accuracy = accuracy
 
     def calcResult(self, algorithm, trainDataset, smt):
-        # before smt_solutions were the solutions calculated before, now it is just the model
-        # add adversAttackPair constraints
         if 'adversAttack' in smt.abstractConstr:
-            smt.addAEConstr(algorithm)
+            smt.readAE(algorithm)
+            smt.addCustomConstr(exceptions=['adversAttack'])
             maxAdversAttack = smt.getMaxAdversAttack(
                 startValue=smt.abstractConstr['adversAttack']['severity'],
                 accuracy=self.accuracy,
@@ -30,8 +30,9 @@ class maxAdversAttackQualPlot(resultSMT):
             self.result = maxAdversAttack['severity']
             self.smtSolutions = maxAdversAttack['smtModel']
             if len(self.smtSolutions) != 0:
-                # I want smt_solutions to be in the same format as trainData
-                # and
+                # extract input and output to the autoencoder of the maximum
+                # adversarial Attack
+                # smt_solutions are to be in the same format as trainData
                 allX = [x for x in self.smtSolutions[0]
                         ['model'] if str(x)[0] == 'x']
                 largestLayer = max([int(str(x)[2]) for x in allX])
@@ -40,15 +41,8 @@ class maxAdversAttackQualPlot(resultSMT):
                 solutionPoints = solutionsToPoints(
                     self.smtSolutions, [
                         'x_0', 'x' + '_' + str(largestLayer)])
-                # fig, ax = plt.subplots(nrows=2, ncols=len(solutionPoints), squeeze = False)
                 fig, ax = plt.subplots(
                     nrows=1, ncols=len(solutionPoints), squeeze=False)
-                # for column in range(len(solutionPoints)):
-                # 	ax[0, column].plot(solutionPoints[column][0])
-                # 	ax[0, column].title.set_text('Input of AE:')
-                # for column in range(len(solutionPoints)):
-                # 	ax[1, column].plot(solutionPoints[column][1])
-                # 	ax[1, column].title.set_text('Output of AE:')
                 for column in range(len(solutionPoints)):
                     ax[0, column].plot(solutionPoints[column][0], color='blue')
                     ax[0, column].title.set_text(
@@ -62,8 +56,6 @@ class maxAdversAttackQualPlot(resultSMT):
             cwd = os.getcwd()
             os.chdir(tmpFolderSmt)
             plt.figure(self.result.number)
-            # plt.savefig(os.getcwd()+'/'+str(self.name))
-            # tikz.save(os.getcwd()+'/'+str(self.name) + '.tex')
             plt.savefig(os.path.join(os.getcwd(), str(self.name)))
             tikz.save(os.path.join(os.getcwd(), str(self.name) + '.tex'))
             plt.close('all')

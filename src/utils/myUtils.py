@@ -273,10 +273,7 @@ def solutionsToPoints(smtSolutions, smtVar):
                 varPoint = []
                 for elem in sortedSolution:
                     if var in str(elem[0]):
-                        numerator = elem[1].numerator_as_long()
-                        denominator = elem[1].denominator_as_long()
-                        decimal = float(numerator / denominator)
-                        varPoint.append(decimal)
+                        varPoint.append(elem[1])
                 solPoint.append(varPoint)
             points.append(solPoint)
         return points
