@@ -160,30 +160,26 @@ def splitResults(results):
 
 
 def execSMTExperiments(trainDatasetAEFolders, smts, resultsSMT):
-    #pool = mp.Pool(mp.cpu_count())
-    #arg_list = []
-    #for folder, smt in product(trainDatasetAEFolders, smts):
-    #    arg_list.append([folder, smt, resultsSMT])
-    #collectedResults = []
-    #print(arg_list)
-    ##import pdb; pdb.set_trace()
-    #for arguments in arg_list:
-    #    print('before')
-    #    print(arguments)
-    #    collectedResults.append(
-    #        pool.apply_async(
-    #            execFixedFolder,
-    #            args=arguments))
-    #pool.close()
-    #pool.join()
-    #import pdb; pdb.set_trace()
-
+    pool = mp.Pool(mp.cpu_count())
     arg_list = []
     for folder, smt in product(trainDatasetAEFolders, smts):
-        arg_list.append((folder, smt, resultsSMT))
+        arg_list.append([folder, smt, resultsSMT])
     collectedResults = []
     for arguments in arg_list:
-        collectedResults.append(execFixedFolder(*arguments))
+        collectedResults.append(
+            pool.apply_async(
+                execFixedFolder,
+                args=arguments))
+    pool.close()
+    pool.join()
+    #import pdb; pdb.set_trace()
+
+    #arg_list = []
+    #for folder, smt in product(trainDatasetAEFolders, smts):
+    #    arg_list.append((folder, smt, resultsSMT))
+    #collectedResults = []
+    #for arguments in arg_list:
+    #    collectedResults.append(execFixedFolder(*arguments))
 
     return collectedResults
 

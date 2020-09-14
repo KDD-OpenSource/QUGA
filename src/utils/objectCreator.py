@@ -6,55 +6,26 @@ import math
 import uuid
 from itertools import product
 
-algorithmInputLayerSize = 7
+algorithmInputLayerSize = 35
 numberSineCycles = 50
 
 
-sineclass_small = [[math.sin((2 *
-                              math.pi *
-                              x) /
-                             (algorithmInputLayerSize)) -
-                    0.1, math.sin((2 *
-                                   math.pi *
-                                   x) /
-                                  (algorithmInputLayerSize)) +
-                    0.1] for x in range(algorithmInputLayerSize)]
-sineclass_largeBeg = [[math.sin((2 *
-                                 math.pi *
-                                 x) /
-                                (3 *
-                                 algorithmInputLayerSize)) -
-                       0.1, math.sin((2 *
-                                      math.pi *
-                                      x) /
-                                     (3 *
-                                      algorithmInputLayerSize)) +
-                       0.1] for x in range(algorithmInputLayerSize)]
-sineclass_largeMid = [[math.sin((2 *
-                                 math.pi *
-                                 x) /
-                                (3 *
-                                 algorithmInputLayerSize)) -
-                       0.1, math.sin((2 *
-                                      math.pi *
-                                      x) /
-                                     (3 *
-                                      algorithmInputLayerSize)) +
-                       0.1] for x in range(algorithmInputLayerSize, 2 *
-                                           algorithmInputLayerSize)]
-sineclass_largeEnd = [[math.sin((2 *
-                                 math.pi *
-                                 x) /
-                                (3 *
-                                 algorithmInputLayerSize)) -
-                       0.1, math.sin((2 *
-                                      math.pi *
-                                      x) /
-                                     (3 *
-                                      algorithmInputLayerSize)) +
-                       0.1] for x in range(2 *
-                                           algorithmInputLayerSize, 3 *
-                                           algorithmInputLayerSize)]
+sineclass_small = [
+    [math.sin((2 * math.pi * x) / (algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (algorithmInputLayerSize)) + 0.1] 
+    for x in range(algorithmInputLayerSize)]
+sineclass_largeBeg = [
+    [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1] 
+    for x in range(algorithmInputLayerSize)]
+sineclass_largeMid = [
+    [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1] 
+    for x in range(algorithmInputLayerSize, 2 * algorithmInputLayerSize)]
+sineclass_largeEnd = [
+    [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1] 
+    for x in range(2 * algorithmInputLayerSize, 3 * algorithmInputLayerSize)]
 
 
 def objectCreator(kwargs):
@@ -95,8 +66,7 @@ def getAlgorithms(seed):
                  'activationFct': [nn.ReLU()],
                  'initialization': [nn.init.xavier_normal_],
                  'batchSize': [30],
-                 #'epochs': [100]
-                 'epochs': [1]
+                 'epochs': [100]
              }
          }
     ])
@@ -179,6 +149,7 @@ def getResults():
         maxAdversAttack(accuracy=0.025),
         maxAdversAttackQualPlot(accuracy=0.025),
         avgError(),
-        timeMaxErrorPlot(times_s=[5,10], errFct = 'LInfty'),
+        timeMaxErrorPlot(times_s=[i for i in range(0,20,5)], errFct = 'LInfty'),
+        maxErrorEst(times_s=[i for i in range(0,20,5)], errFct = 'LInfty'),
     ]
     return results
