@@ -3,7 +3,7 @@ from .resultAE import resultAE
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('TkAgg')
 
 
 class origReconTsPlot(resultAE):

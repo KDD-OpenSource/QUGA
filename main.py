@@ -1,10 +1,10 @@
 """Main Module of AE_SMT Framework
 """
+import matplotlib
+matplotlib.use('Agg')
 from src.utils.objectCreator import objectCreator, getAlgorithms, getDatasets, getSmts, getResults
 from src.utils.experimentSettings import ExperimentSettings
 from src.utils.executeExperiments import executeExperiments
-import matplotlib
-matplotlib.use('Agg')
 
 
 def main():

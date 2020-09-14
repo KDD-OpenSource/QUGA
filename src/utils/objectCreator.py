@@ -149,7 +149,7 @@ def getResults():
         maxAdversAttack(accuracy=0.025),
         maxAdversAttackQualPlot(accuracy=0.025),
         avgError(),
-        timeMaxErrorPlot(times_s=[i for i in range(0,20,5)], errFct = 'LInfty'),
-        maxErrorEst(times_s=[i for i in range(0,20,5)], errFct = 'LInfty'),
+        timeMaxErrorPlot(times_s=[i for i in range(0,180,5)], errFct = 'LInfty'),
+        maxErrorEst(times_s=[i for i in range(0,180,5)], errFct = 'LInfty'),
     ]
     return results
