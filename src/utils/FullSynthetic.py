@@ -1,6 +1,6 @@
 from src.algorithms import autoencoder, smtSolver
-from src.data import sineNoise, twoSineNoise, circleNoise, smallKitchenAppliances, twoSineFrequenciesNoise, twoSineAmplitudesNoise, eegWaves, ecg5000, twoSineFrequenciesNoiseTest, sampleBoxTest
-from src.evaluation import origReconTsPlot, origReconParallelPlot, origReconPairPlot, adversAttackPairQualPlot, maxAdversAttack, maxSumAdversAttack, avgError, avgErrorAEParamPlot, maxAdversAttackAEParamPlot, maxAdversAttackQualPlot, latentSpaceSMTPlot, latentSpaceSMTPlot3D, maxAdversGrowingBoxPlot, maxErrorEst, maxErrorEstAEParamPlot, joinedAEParamPlot, maxAdversAttackErrorEstAEParamPlot, theoMaxErrorEstAEParamPlot, maxAdversMovingBoxPlot, maxLInftyErrorEst
+from src.data import ecg5000, twoSineFrequenciesNoise, sampleBoxTest
+from src.evaluation import origReconTsPlot, maxAdversAttack, avgError, maxAdversAttackQualPlot, maxErrorEst, timeMaxErrorPlot
 import torch.nn as nn
 import math
 import uuid
@@ -10,51 +10,22 @@ algorithmInputLayerSize = 35
 numberSineCycles = 50
 
 
-sineclass_small = [[math.sin((2 *
-                              math.pi *
-                              x) /
-                             (algorithmInputLayerSize)) -
-                    0.1, math.sin((2 *
-                                   math.pi *
-                                   x) /
-                                  (algorithmInputLayerSize)) +
-                    0.1] for x in range(algorithmInputLayerSize)]
-sineclass_largeBeg = [[math.sin((2 *
-                                 math.pi *
-                                 x) /
-                                (3 *
-                                 algorithmInputLayerSize)) -
-                       0.1, math.sin((2 *
-                                      math.pi *
-                                      x) /
-                                     (3 *
-                                      algorithmInputLayerSize)) +
-                       0.1] for x in range(algorithmInputLayerSize)]
-sineclass_largeMid = [[math.sin((2 *
-                                 math.pi *
-                                 x) /
-                                (3 *
-                                 algorithmInputLayerSize)) -
-                       0.1, math.sin((2 *
-                                      math.pi *
-                                      x) /
-                                     (3 *
-                                      algorithmInputLayerSize)) +
-                       0.1] for x in range(algorithmInputLayerSize, 2 *
-                                           algorithmInputLayerSize)]
-sineclass_largeEnd = [[math.sin((2 *
-                                 math.pi *
-                                 x) /
-                                (3 *
-                                 algorithmInputLayerSize)) -
-                       0.1, math.sin((2 *
-                                      math.pi *
-                                      x) /
-                                     (3 *
-                                      algorithmInputLayerSize)) +
-                       0.1] for x in range(2 *
-                                           algorithmInputLayerSize, 3 *
-                                           algorithmInputLayerSize)]
+sineclass_small = [
+    [math.sin((2 * math.pi * x) / (algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (algorithmInputLayerSize)) + 0.1] 
+    for x in range(algorithmInputLayerSize)]
+sineclass_largeBeg = [
+    [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1]
+    for x in range(algorithmInputLayerSize)]
+sineclass_largeMid = [
+    [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1] 
+    for x in range(algorithmInputLayerSize, 2 * algorithmInputLayerSize)]
+sineclass_largeEnd = [
+    [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1] 
+    for x in range(2 * algorithmInputLayerSize, 3 * algorithmInputLayerSize)]
 
 
 def objectCreator(kwargs):
@@ -67,8 +38,6 @@ def objectCreator(kwargs):
                     ' ', '').replace(
                     '<function', '')[
                     :5] for elem in combinations]
-            # TODO If name already exists, take that name. Else make it the
-            # string
             tempName = str(elem["objectType"].__name__)[
                 :5] + '_' + '_'.join(combinationsStr)
             tempDict['name'] = tempName
@@ -111,7 +80,6 @@ def getDatasets(seed):
                     'seed': [seed],
                     'purposeFlg': ['train', 'test'],
                     'windowStep': [algorithmInputLayerSize],
-                    # 'numCycles0': [20,40,60,80,100,150,200,250,500],
                     'numCycles0': [250],
                     'cycleLength0': [3 * algorithmInputLayerSize],
                     'numCycles1': [500],
@@ -178,8 +146,7 @@ def getResults():
         maxAdversAttack(accuracy=0.025),
         maxAdversAttackQualPlot(accuracy=0.025),
         avgError(),
-        maxLInftyErrorEst(sampleSizes=[2**k for k in range(10, 25)]),
-        maxErrorEst(sampleSizes=[2**k for k in range(10, 25)]),
-
+        timeMaxErrorPlot(times_s=[60*1*i for i in range(1,181)], errFct = 'LInfty'),
+        maxErrorEst(times_s=[60*1*i for i in range(1,181)], errFct = 'LInfty'),
     ]
     return results

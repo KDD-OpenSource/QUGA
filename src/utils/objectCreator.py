@@ -16,7 +16,7 @@ sineclass_small = [
     for x in range(algorithmInputLayerSize)]
 sineclass_largeBeg = [
     [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
-    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1] 
+    math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) + 0.1]
     for x in range(algorithmInputLayerSize)]
 sineclass_largeMid = [
     [math.sin((2 * math.pi * x) / (3 * algorithmInputLayerSize)) - 0.1,
@@ -38,8 +38,6 @@ def objectCreator(kwargs):
                     ' ', '').replace(
                     '<function', '')[
                     :5] for elem in combinations]
-            # TODO If name already exists, take that name. Else make it the
-            # string
             tempName = str(elem["objectType"].__name__)[
                 :5] + '_' + '_'.join(combinationsStr)
             tempDict['name'] = tempName
@@ -82,7 +80,6 @@ def getDatasets(seed):
                     'seed': [seed],
                     'purposeFlg': ['train', 'test'],
                     'windowStep': [algorithmInputLayerSize],
-                    # 'numCycles0': [20,40,60,80,100,150,200,250,500],
                     'numCycles0': [250],
                     'cycleLength0': [3 * algorithmInputLayerSize],
                     'numCycles1': [500],
@@ -149,7 +146,8 @@ def getResults():
         maxAdversAttack(accuracy=0.025),
         maxAdversAttackQualPlot(accuracy=0.025),
         avgError(),
-        timeMaxErrorPlot(times_s=[i for i in range(0,180,5)], errFct = 'LInfty'),
-        maxErrorEst(times_s=[i for i in range(0,180,5)], errFct = 'LInfty'),
+        timeMaxErrorPlot(times_s=[60*1*i for i in range(1,181)], errFct = 'LInfty'),
+        maxErrorEst(times_s=[60*1*i for i in range(1,181)], errFct = 'LInfty'),
     ]
     return results
+
