@@ -16,6 +16,9 @@ python3 main.py
 To reproduce the results of the sine-curve dataset replace the contents of objectCreator.py by the contents in FullSynthetic.py. Then run "python3 main.py".
 Similarly to reproduce the experiments with the ECG5000 Dataset replace the contents of objectCreator.py by the contents in FullReal.py.
 
+## Supplementary Material
+The file "QUGA_withSupplMat.pdf" contains both the paper and supplementary material (proofs of the theorems and a precise description of the experiments).
+
 ## Authors/Contributors
 * [Benedikt Böing](https://github.com/bboeing)
 * [Rajarshi Roy](https://github.com/rajarshi008)
