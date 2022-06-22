@@ -1,5 +1,5 @@
 z3_solver==4.8.7.0
-numpy==1.16.6
+numpy==1.22.0
 pandas==0.24.2
 matplotlib==2.2.5
 torch==1.4.0+cpu
